@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Визуализация дома</title>
+
+	<!-- Иконки -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+
+	<!-- Стили проекта -->
+	<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+	<aside class="sidebar" aria-label="Боковое меню">
+		<h2>Меню</h2>
+		<nav aria-label="Основная навигация">
+			<a href="houses.html"><i class="fa-solid fa-city" aria-hidden="true"></i> Дома</a>
+		</nav>
+	</aside>
+
+	<main class="content" id="main" tabindex="-1">
+		<h1 id="houseName">Название дома</h1>
+
+		<section aria-labelledby="chessboard-heading">
+			<div id="chessboard"></div>
+		</section>
+
+		<section aria-labelledby="parking-heading">
+			<h2 id="parking-heading">Парковочные места</h2>
+			<div id="parking"></div>
+		</section>
+
+		<section aria-labelledby="storages-heading">
+			<h2 id="storages-heading">Кладовые</h2>
+			<div id="storages"></div>
+		</section>
+	</main>
+
+	<!-- Всплывающая подсказка -->
+	<div id="tooltip" class="hidden" role="tooltip" aria-hidden="true"></div>
+
+	<!-- Модалка: Редактировать жильца -->
+	<div id="editResidentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editResidentTitle" aria-hidden="true">
+		<div class="modal-content">
+			<button type="button" class="close" aria-label="Закрыть">&times;</button>
+			<h2 id="editResidentTitle">Редактировать жильца</h2>
+
+			<form id="editResidentForm">
+				<label for="residentFullName">ФИО *</label>
+				<input type="text" id="residentFullName" name="full_name" placeholder="ФИО" required autocomplete="name" />
+
+				<label for="residentTelegram">Телеграм</label>
+				<div class="field-with-visibility">
+					<input type="text" id="residentTelegram" name="telegram" autocomplete="off" />
+					<button type="button" class="vis-toggle" data-target="residentTelegram" aria-controls="residentTelegram" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Телеграм</span>
+					</button>
+				</div>
+
+				<label for="residentPhone">Телефон</label>
+				<div class="field-with-visibility">
+					<input type="text" id="residentPhone" name="phone" autocomplete="tel" inputmode="tel" />
+					<button type="button" class="vis-toggle" data-target="residentPhone" aria-controls="residentPhone" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Телефона</span>
+					</button>
+				</div>
+
+				<label for="residentEmail">Email</label>
+				<div class="field-with-visibility">
+					<input type="email" id="residentEmail" name="email" autocomplete="email" />
+					<button type="button" class="vis-toggle" data-target="residentEmail" aria-controls="residentEmail" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Email</span>
+					</button>
+				</div>
+
+				<div id="apartmentContainer">
+					<label>Квартиры</label>
+					<div class="apartment-input">
+						<input type="text" name="apartments[]" placeholder="Введите номер квартиры" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="tenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addApartmentField" class="button">Добавить квартиру</button>
+				</div>
+
+				<div id="parkingContainer">
+					<label>Парковочные места</label>
+					<div class="parking-input">
+						<input type="text" name="parking[]" placeholder="Введите номер парковки" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="parkingTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addParkingField" class="button">Добавить парковочное место</button>
+				</div>
+
+				<div id="storageContainer">
+					<label>Кладовые</label>
+					<div class="storage-input">
+						<input type="text" name="storages[]" placeholder="Введите номер кладовой" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="storageTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addStorageField" class="button">Добавить кладовую</button>
+				</div>
+
+				<button type="submit" class="button">Сохранить</button>
+			</form>
+		</div>
+	</div>
+
+	<!-- Модалка: Добавить жильца -->
+	<div id="addResidentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addResidentTitle" aria-hidden="true">
+		<div class="modal-content">
+			<button type="button" class="close" aria-label="Закрыть">&times;</button>
+			<h2 id="addResidentTitle">Добавить жильца</h2>
+
+			<form id="addResidentForm">
+				<label for="residentFullName">ФИО *</label>
+				<input type="text" id="residentFullName" name="full_name" placeholder="ФИО" required autocomplete="name" />
+
+				<label for="residentTelegram">Телеграм</label>
+				<div class="field-with-visibility">
+					<input type="text" id="residentTelegram" name="telegram" autocomplete="off" />
+					<button type="button" class="vis-toggle" data-target="residentTelegram" aria-controls="residentTelegram" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Телеграм</span>
+					</button>
+				</div>
+
+				<label for="residentPhone">Телефон</label>
+				<div class="field-with-visibility">
+					<input type="text" id="residentPhone" name="phone" autocomplete="tel" inputmode="tel" />
+					<button type="button" class="vis-toggle" data-target="residentPhone" aria-controls="residentPhone" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Телефона</span>
+					</button>
+				</div>
+
+				<label for="residentEmail">Email</label>
+				<div class="field-with-visibility">
+					<input type="email" id="residentEmail" name="email" autocomplete="email" />
+					<button type="button" class="vis-toggle" data-target="residentEmail" aria-controls="residentEmail" aria-pressed="false" title="Показывать/скрывать в шахматке">
+						<i class="fa-regular fa-eye" aria-hidden="true"></i>
+						<span class="visually-hidden">Переключить видимость Email</span>
+					</button>
+				</div>
+
+				<div id="apartmentContainer">
+					<label>Квартиры</label>
+					<div class="apartment-input">
+						<input type="text" name="apartments[]" placeholder="Введите номер квартиры" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="tenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addApartmentField" class="button">Добавить квартиру</button>
+				</div>
+
+				<div id="parkingContainer">
+					<label>Парковочные места</label>
+					<div class="parking-input">
+						<input type="text" name="parking[]" placeholder="Введите номер парковки" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="parkingTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addParkingField" class="button">Добавить парковочное место</button>
+				</div>
+
+				<div id="storageContainer">
+					<label>Кладовые</label>
+					<div class="storage-input">
+						<input type="text" name="storages[]" placeholder="Введите номер кладовой" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="storageTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addStorageField" class="button">Добавить кладовую</button>
+				</div>
+
+				<button type="submit" class="button">Сохранить</button>
+			</form>
+		</div>
+	</div>
+
+	<noscript>Для работы страницы нужен JavaScript.</noscript>
+	<script src="../scripts/houseVisualization.js"></script>
+</body>
+</html>

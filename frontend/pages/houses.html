@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Дома</title>
+
+	<!-- Иконки -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+
+	<!-- Стили проекта -->
+	<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+	<aside class="sidebar" aria-label="Боковое меню">
+		<h2>Меню</h2>
+		<nav aria-label="Основная навигация">
+			<a href="houses.html"><i class="fa-solid fa-city" aria-hidden="true"></i> Дома</a>
+		</nav>
+
+		<!-- Кнопка открытия модалки создания дома -->
+		<button id="openModal" class="button" type="button" aria-controls="houseModal">Добавить дом</button>
+	</aside>
+
+	<main class="content" id="main" tabindex="-1">
+		<!-- Модалка: создание дома -->
+		<div id="houseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="houseModalTitle" aria-hidden="true">
+			<div class="modal-content">
+				<button type="button" class="close" id="closeModal" aria-label="Закрыть">&times;</button>
+				<h2 id="houseModalTitle">Создание нового дома</h2>
+
+				<form id="houseForm">
+					<label for="houseName">Название:</label>
+					<input type="text" id="houseName" required autocomplete="organization" />
+
+					<label for="houseAddress">Адрес:</label>
+					<input type="text" id="houseAddress" required autocomplete="street-address" />
+
+					<label>
+						<input type="checkbox" id="nonResidential" />
+						Нежилой первый этаж
+					</label>
+
+					<h3>Подъезды</h3>
+					<div id="entrancesContainer"></div>
+					<button type="button" id="addEntrance" class="button">Добавить подъезд</button>
+
+					<h3>Паркинг</h3>
+					<label><input type="checkbox" id="addParking" /> Добавить паркинг</label>
+					<div id="parkingContainer" style="display: none;">
+						<button type="button" id="addParkingLevel" class="button">Добавить уровень паркинга</button>
+					</div>
+
+					<h3>Кладовые</h3>
+					<label><input type="checkbox" id="addStorage" /> Добавить кладовые</label>
+					<div id="storageContainer" style="display: none;">
+						<button type="button" id="addStorageLevel" class="button">Добавить уровень кладовых</button>
+					</div>
+
+					<button type="submit" class="button">Создать</button>
+				</form>
+			</div>
+		</div>
+
+		<div class="container">
+			<h1>Список домов</h1>
+			<div id="housesContainer"></div>
+		</div>
+
+		<!-- Модалка: редактировать дом -->
+		<div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle" aria-hidden="true">
+			<div class="modal-content">
+				<button type="button" class="close" aria-label="Закрыть">&times;</button>
+				<h2 id="editModalTitle">Редактировать дом</h2>
+
+				<form id="editForm">
+					<label for="editName">Название дома:</label>
+					<input type="text" id="editName" required autocomplete="organization" />
+
+					<label for="editAddress">Адрес дома:</label>
+					<input type="text" id="editAddress" required autocomplete="street-address" />
+
+					<button type="submit" class="button">Сохранить</button>
+				</form>
+			</div>
+		</div>
+	</main>
+
+	<!-- Модалка: Добавить жильца (используется с карточек домов) -->
+	<div id="addResidentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addResidentTitle" aria-hidden="true">
+		<div class="modal-content">
+			<button type="button" class="close" aria-label="Закрыть">&times;</button>
+			<h2 id="addResidentTitle">Добавить жильца</h2>
+
+			<form id="addResidentForm">
+				<label for="residentFullName">ФИО *</label>
+				<input type="text" id="residentFullName" name="full_name" placeholder="ФИО" required autocomplete="name" />
+
+				<label for="residentTelegram">Телеграм</label>
+				<input type="text" id="residentTelegram" name="telegram" autocomplete="off" />
+
+				<label for="residentPhone">Телефон</label>
+				<input type="text" id="residentPhone" name="phone" autocomplete="tel" inputmode="tel" />
+
+				<label for="residentEmail">Email</label>
+				<input type="email" id="residentEmail" name="email" autocomplete="email" />
+
+				<div id="apartmentContainer">
+					<label>Квартиры</label>
+					<div class="apartment-input">
+						<input type="text" name="apartments[]" placeholder="Введите номер квартиры" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="tenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addApartmentField" class="button">Добавить квартиру</button>
+				</div>
+
+				<div id="parkingContainer">
+					<label>Парковочные места</label>
+					<div class="parking-input">
+						<input type="text" name="parking[]" placeholder="Введите номер парковки" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="parkingTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addParkingField" class="button">Добавить парковочное место</button>
+				</div>
+
+				<div id="storageContainer">
+					<label>Кладовые</label>
+					<div class="storage-input">
+						<input type="text" name="storages[]" placeholder="Введите номер кладовой" inputmode="numeric" />
+						<label>
+							<input type="checkbox" name="storageTenant[]" /> Арендатор
+						</label>
+					</div>
+					<button type="button" id="addStorageField" class="button">Добавить кладовую</button>
+				</div>
+
+				<button type="submit" class="button">Сохранить</button>
+			</form>
+		</div>
+	</div>
+
+	<noscript>Для работы страницы нужен JavaScript.</noscript>
+	<script src="../scripts/houses.js"></script>
+</body>
+</html>
