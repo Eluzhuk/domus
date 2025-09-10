@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 	let currentHouseId = null;
 
 	try {
-		const response = await fetch('http://localhost:5000/api/houses');
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses`);
 		const houses = await response.json();
 
 		if (houses.length === 0) {
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 				const id = e.target.dataset.id;
 				if (confirm('Вы уверены, что хотите удалить этот дом? Осторожно: данные не подлежат восстановлению')) {
 					try {
-							const response = await fetch(`http://localhost:5000/api/houses/${id}`, {
+							const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${id}`, {
 								method: 'DELETE'
 							});
 
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 			const newAddress = document.getElementById('editAddress').value;
 
 			try {
-				const response = await fetch(`http://localhost:5000/api/houses/${currentHouseId}`, {
+				const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${currentHouseId}`, {
 					method: 'PUT',
 					headers: {
 							'Content-Type': 'application/json'
@@ -272,7 +272,7 @@ document.addEventListener('click', function (e) {
 
 		// Отправляем данные на сервер
 		try {
-				const response = await fetch(`http://localhost:5000/api/houses/${houseId}/residents`, {
+				const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/residents`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json'
@@ -437,7 +437,7 @@ document.getElementById('houseForm').onsubmit = async function (e) {
 
 	// Отправка данных на сервер
 	try {
-		const response = await fetch('http://localhost:5000/api/houses', {
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -457,3 +457,25 @@ document.getElementById('houseForm').onsubmit = async function (e) {
 		alert('Ошибка подключения к серверу.');
 	}
 };
+/**
+ * Навешивает фильтрацию карточек домов по тексту.
+ * Фильтр не трогает данные, просто скрывает/показывает DOM-элементы.
+ * @param {HTMLInputElement} input - поле ввода поиска
+ */
+function initHouseSearch(input) {
+if (!input) return;
+input.addEventListener('input', () => {
+	const q = input.value.trim().toLowerCase();
+	document.querySelectorAll('.house-card').forEach(card => {
+		const text = (card.innerText || card.textContent || '').toLowerCase();
+		card.style.display = text.includes(q) ? '' : 'none';
+	});
+});
+}
+
+// Инициализация поиска после загрузки DOM (если поле есть на странице)
+(function initSearchIfPresent() {
+const searchInput = document.getElementById('searchHouse');
+initHouseSearch(searchInput);
+})();
+

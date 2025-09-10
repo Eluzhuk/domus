@@ -8,6 +8,13 @@
 	<!-- Иконки -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 
+	<!-- Bootstrap -->
+	<link
+	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+	rel="stylesheet"
+	integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+	crossorigin="anonymous"
+	/>
 	<!-- Стили проекта -->
 	<link rel="stylesheet" href="../assets/styles.css" />
 </head>
@@ -64,6 +71,9 @@
 
 		<div class="container">
 			<h1>Список домов</h1>
+			<div class="mb-3">
+				<input type="search" class="form-control" id="searchHouse" placeholder="Поиск по адресу или ID…">
+			</div>
 			<div id="housesContainer"></div>
 		</div>
 
@@ -144,6 +154,7 @@
 	</div>
 
 	<noscript>Для работы страницы нужен JavaScript.</noscript>
+	<script src="../scripts/config.js"></script>
 	<script src="../scripts/houses.js"></script>
 </body>
 </html>

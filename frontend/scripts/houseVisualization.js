@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 	initVisibilityToggles(document.getElementById('editResidentModal'));
 
 	try {
-		const response = await fetch(`http://localhost:5000/api/houses/${houseId}/structure`);
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/structure`);
 		const house = await response.json();
 
 		houseNameElement.textContent = house.name;
@@ -420,7 +420,7 @@ if (!Array.isArray(residents) || residents.length === 0) {
 
 		if (!hasPrivacy) {
 		try {
-			const resp = await fetch(`http://localhost:5000/api/residents/${residentId}`);
+			const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
 			if (!resp.ok) return;
 			const data = await resp.json();
 			const fresh = data?.privacy;
@@ -476,7 +476,7 @@ if (!residentId || !relation || !relationId) {
 if (!confirm('Отвязать жильца от этого объекта?')) return;
 
 try {
-	const response = await fetch(`http://localhost:5000/api/residents/${residentId}/link`, {
+	const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}/link`, {
 		method: 'DELETE',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ relation, relation_id: Number(relationId) })
@@ -497,7 +497,7 @@ try {
 
 const openEditResidentModal = async (residentId) => {
 	try {
-		const response = await fetch(`http://localhost:5000/api/residents/${residentId}`);
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
 		if (!response.ok) {
 			throw new Error('Ошибка загрузки данных жильца.');
 		}
@@ -724,7 +724,7 @@ document.getElementById('editResidentForm').addEventListener('submit', async fun
 	console.log('Данные перед отправкой:', JSON.stringify(data, null, 2)); // Лог перед отправкой
 
 	try {
-		const response = await fetch(`http://localhost:5000/api/residents/${residentId}`, {
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`, {
 			method: 'PUT',
 			headers: {
 					'Content-Type': 'application/json',
@@ -867,7 +867,7 @@ document.getElementById('addResidentForm').onsubmit = async function (e) {
 	console.log("📤 Отправляем данные:", JSON.stringify(data, null, 2));
 
 	try {
-		const response = await fetch(`http://localhost:5000/api/houses/${houseId}/residents`, {
+		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/residents`, {
 			method: 'POST',
 			headers: {
 					'Content-Type': 'application/json'
