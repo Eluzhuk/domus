@@ -42,6 +42,9 @@ app.use('/api', residentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/public', publicRoutes);
 
+const usersRoutes = require('./src/routes/users.routes');
+app.use('/api', usersRoutes);
+
 // Middleware для обработки ошибок (на самый конец цепочки)
 app.use((err, req, res, next) => {
 console.error(err.stack);
