@@ -1,51 +1,78 @@
 require('dotenv').config();
+
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
-const houseRoutes = require('./routes/houseRoutes');
-const sequelize = require('./models').sequelize;
-const residentRoutes = require('./routes/residentRoutes');
+const cookieParser = require('cookie-parser');
+
+// Маршруты вашего проекта
+const houseRoutes = require('./src/routes/houseRoutes');
+const residentRoutes = require('./src/routes/residentRoutes');
+
+// Инициализация моделей и Sequelize (один раз)
+const { sequelize } = require('./src/models');
+
+// Новые маршруты Этапа 1 (Auth + Публичная шахматка)
+const authRoutes = require('./src/routes/auth.routes');
+const publicRoutes = require('./src/routes/public.routes');
 
 const app = express();
-app.use(bodyParser.json());
+
+/**
+ * Настройка CORS.
+ * ВАЖНО: для cookie (refresh) нужен credentials: true и НЕ можно '*' в origin.
+ * Задайте CORS_ORIGIN в .env при необходимости (по умолчанию localhost:5173).
+ */
+const ALLOWED_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({
-	origin: '*',  // Разрешить запросы с любого домена
-	methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Разрешённые методы
-	allowedHeaders: ['Content-Type', 'Authorization']  // Разрешённые заголовки
- }));
+origin: ALLOWED_ORIGIN,
+credentials: true,
+methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Парсинг JSON и cookie (refresh хранится в httpOnly cookie)
+app.use(express.json());
+app.use(cookieParser());
+
+// Подключаем существующие маршруты
 app.use('/api', houseRoutes);
 app.use('/api', residentRoutes);
 
-// Middleware для обработки ошибок
+// Новые маршруты: аутентификация и публичная шахматка
+app.use('/api/auth', authRoutes);
+app.use('/api/public', publicRoutes);
+
+// Middleware для обработки ошибок (на самый конец цепочки)
 app.use((err, req, res, next) => {
-	console.error(err.stack);
-	res.status(500).send({ error: 'Что-то пошло не так!' });
+console.error(err.stack);
+res.status(500).send({ error: 'Что-то пошло не так!' });
 });
 
 const PORT = process.env.PORT || 5000;
 
 // Запуск сервера
 sequelize.authenticate()
-.then(() => {
-console.log('Подключение к базе данных успешно');
+.then(async () => {
+	console.log('Подключение к базе данных успешно');
 
-// Создадим таблицу resident_privacy, если её нет
-const { sequelize } = require('./models');
-sequelize.query(`
-	CREATE TABLE IF NOT EXISTS resident_privacy (
+	// Создадим таблицу resident_privacy, если её нет (как и раньше)
+	await sequelize.query(`
+		CREATE TABLE IF NOT EXISTS resident_privacy (
 		id SERIAL PRIMARY KEY,
 		resident_id INTEGER UNIQUE REFERENCES residents(id) ON DELETE CASCADE,
-		show_full_name BOOLEAN DEFAULT TRUE,
-		show_phone BOOLEAN DEFAULT TRUE,
-		show_email BOOLEAN DEFAULT TRUE,
-		show_telegram BOOLEAN DEFAULT TRUE
-	);
-`).then(() => console.log('resident_privacy готова'));
+		show_full_name BOOLEAN DEFAULT FALSE,
+		show_phone     BOOLEAN DEFAULT FALSE,
+		show_email     BOOLEAN DEFAULT FALSE,
+		show_telegram  BOOLEAN DEFAULT FALSE
+		);
+	`);
+	console.log('resident_privacy готова');
 
-app.listen(PORT, () => {
-	console.log(`Сервер запущен на http://localhost:${PORT}`);
-});
+	app.listen(PORT, () => {
+		console.log(`Сервер запущен на http://localhost:${PORT}`);
+		console.log(`CORS ORIGIN: ${ALLOWED_ORIGIN} (credentials: true)`);
+	});
 })
 .catch((err) => {
-console.error('Ошибка подключения к базе данных:', err);
+	console.error('Ошибка подключения к базе данных:', err);
 });
