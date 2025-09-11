@@ -154,4 +154,65 @@ router.post('/users/:id/delegation-cap', checkPermission('role.assign_permission
   }
 });
 
+// --- Справочники для UI ---
+
+/**
+ * GET /api/roles
+ * Требует: user.read
+ * Возвращает список ролей для UI.
+ */
+router.get('/roles', checkPermission('user.read'), async (req, res) => {
+// Пока роли фиксированы
+res.json(['admin']);
+});
+
+/**
+ * GET /api/permissions
+ * Требует: role.assign_permissions
+ * Возвращает все права (code, description) для чекбоксов.
+ */
+router.get('/permissions', checkPermission('role.assign_permissions'), async (req, res) => {
+try {
+	const { sequelize } = require('../models');
+	const [rows] = await sequelize.query(
+		`SELECT code, description FROM permissions ORDER BY code`
+	);
+	res.json(rows || []);
+} catch (e) {
+	console.error('[GET /api/permissions]', e);
+	res.status(500).json({ error: 'INTERNAL_ERROR' });
+}
+});
+
+/**
+ * POST /api/users/:id/enable
+ * Требует: user.disable (то же право, что и на отключение)
+ */
+router.post('/users/:id/enable', checkPermission('user.disable'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const r = await userService.enableUser(req.user.id, id);
+    res.json(r);
+  } catch (e) {
+    const code = e.message || 'ERROR';
+    res.status(code === 'FORBIDDEN_SUPERADMIN' ? 403 : (code.endsWith('_FORBIDDEN') ? 403 : 400)).json({ error: code });
+  }
+});
+
+/**
+ * PATCH /api/users/:id/profile
+ * Требует: user.manager.update (переиспользуем как "user.update") — при желании переименуем позже.
+ * Body: { email?, password?, display_name? }
+ */
+router.patch('/users/:id/profile', checkPermission('user.manager.update'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const r = await userService.updateProfile(req.user.id, id, req.body || {});
+    res.json(r);
+  } catch (e) {
+    const code = e.message || 'ERROR';
+    res.status(code === 'EMAIL_EXISTS' ? 409 : (code.endsWith('_FORBIDDEN') ? 403 : 400)).json({ error: code });
+  }
+});
+
 module.exports = router;

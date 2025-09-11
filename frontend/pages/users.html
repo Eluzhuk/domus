@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<title>Domus — Пользователи</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+	body { font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif; margin: 16px; }
+	.row { display: flex; gap: 16px; flex-wrap: wrap; }
+	.card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+	.card h3 { margin: 0 0 8px; font-size: 18px; }
+	.btn { padding: 6px 10px; border: 1px solid #888; background: #f6f6f6; border-radius: 6px; cursor: pointer; }
+	.btn.primary { background: #2563eb; color: #fff; border-color: #2563eb;}
+	.btn.danger { background: #ef4444; color: #fff; border-color: #ef4444;}
+	.btn.warn { background: #f59e0b; color:#111; border-color:#f59e0b; }
+	.btn:disabled { opacity: .5; cursor: not-allowed; }
+	input, select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; }
+	table { width: 100%; border-collapse: collapse; }
+	th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; vertical-align: top; }
+	.muted { color: #666; font-size: 12px; }
+	.inline { display: inline-flex; gap: 8px; align-items: center; }
+	.hidden { display: none; }
+	.err { color: #b91c1c; }
+	.ok { color: #166534; }
+	.grid { display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+	.pill { display:inline-block; padding:2px 8px; background:#eef2ff; border-radius: 999px; font-size:12px; margin-right:4px;}
+	details > summary { cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Пользователи</h1>
+
+<div class="row">
+	<div class="card" style="flex:1; min-width: 320px;">
+		<h3>Вход</h3>
+		<div class="grid">
+		<label>Email<br><input id="loginEmail" type="email" placeholder="owner@domus.local"></label>
+		<label>Пароль<br><input id="loginPass" type="password" placeholder="ChangeMe123!"></label>
+		</div>
+		<div class="inline" style="margin-top:8px;">
+		<button id="btnLogin" class="btn primary">Войти</button>
+		<button id="btnRefresh" class="btn">Обновить access</button>
+		<button id="btnLogout" class="btn warn">Выйти</button>
+		</div>
+		<div id="authStatus" class="muted" style="margin-top:8px;"></div>
+	</div>
+
+	<div class="card" style="flex:1; min-width: 320px;">
+		<h3>Создать</h3>
+		<details open>
+		<summary>Админ</summary>
+		<div class="grid" style="margin:8px 0;">
+			<label>Email<br><input id="adminEmail" type="email" placeholder="admin1@domus.local"></label>
+			<label>Пароль<br><input id="adminPass" type="password" placeholder="Admin1Pass!"></label>
+			<label>Никнейм<br><input id="adminNick" type="text" placeholder="Например: Иван_А1"></label>
+		</div>
+		<div id="adminHouses" class="muted">Дома загружаются…</div>
+		<button id="btnCreateAdmin" class="btn">Создать админа</button>
+		</details>
+	</div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+	<div class="inline" style="justify-content: space-between; width:100%;">
+		<h3 style="margin:0;">Список пользователей</h3>
+		<button id="btnReload" class="btn">Обновить список</button>
+	</div>
+	<div id="usersTable" class="muted" style="margin-top:8px;">Нет данных</div>
+</div>
+
+<!-- Подключения: сначала конфиг, затем auth, затем users -->
+<script src="../scripts/config.js"></script>
+<script src="../scripts/auth.js"></script>
+<script src="../scripts/users.js"></script>
+</body>
+</html>
