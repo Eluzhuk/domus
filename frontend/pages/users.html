@@ -4,28 +4,12 @@
 <meta charset="utf-8"/>
 <title>Domus — Пользователи</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<style>
-	body { font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif; margin: 16px; }
-	.row { display: flex; gap: 16px; flex-wrap: wrap; }
-	.card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
-	.card h3 { margin: 0 0 8px; font-size: 18px; }
-	.btn { padding: 6px 10px; border: 1px solid #888; background: #f6f6f6; border-radius: 6px; cursor: pointer; }
-	.btn.primary { background: #2563eb; color: #fff; border-color: #2563eb;}
-	.btn.danger { background: #ef4444; color: #fff; border-color: #ef4444;}
-	.btn.warn { background: #f59e0b; color:#111; border-color:#f59e0b; }
-	.btn:disabled { opacity: .5; cursor: not-allowed; }
-	input, select { padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; }
-	table { width: 100%; border-collapse: collapse; }
-	th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; vertical-align: top; }
-	.muted { color: #666; font-size: 12px; }
-	.inline { display: inline-flex; gap: 8px; align-items: center; }
-	.hidden { display: none; }
-	.err { color: #b91c1c; }
-	.ok { color: #166534; }
-	.grid { display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-	.pill { display:inline-block; padding:2px 8px; background:#eef2ff; border-radius: 999px; font-size:12px; margin-right:4px;}
-	details > summary { cursor: pointer; }
-</style>
+	<!-- Tabler CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
+	<!-- Иконки -->
+	<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
+	<!-- Персонализация проекта -->
+	<link rel="stylesheet" href="../assets/styles.css" />
 </head>
 <body>
 <h1>Пользователи</h1>
@@ -71,6 +55,11 @@
 <!-- Подключения: сначала конфиг, затем auth, затем users -->
 <script src="../scripts/config.js"></script>
 <script src="../scripts/auth.js"></script>
-<script src="../scripts/users.js"></script>
+<script src="../scripts/ui.js"></script>
+<script src="../scripts/auth-guard.js"></script>
+<script src="../scripts/layout.js"></script>
+<script src="../scripts/users.js" defer></script>
+<!-- Tabler JS -->
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,224 @@
+/* Domus: стили сайдбара на Tabler
+   Меняйте значения переменных ниже под свои предпочтения.
+   Все комментарии — на русском, чтобы было удобно сопровождать.
+*/
+
+/* === Настраиваемые переменные === */
+:root {
+	/* Основной шрифт только для САЙДБАРА (можно любой web-safe или подключённый Google Font) */
+	--domus-sidebar-font-family: "Inter", "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+
+	/* Базовый размер шрифта в сайдбаре */
+	--domus-sidebar-font-size: 0.95rem;  /* 0.95–1.05rem — комфортно */
+
+	/* Жирность подписи пункта меню */
+	--domus-sidebar-font-weight: 500;
+
+	/* Размер иконок (webfont Tabler Icons) рядом с пунктами меню */
+	--domus-sidebar-icon-size: 1.1rem;
+	--domus-sb-hover-bg-light: rgba(0, 0, 0, .04);
+	--domus-sb-active-bg-light: rgba(0, 0, 0, .08);
+	--domus-sb-hover-bg-dark: rgba(255, 255, 255, .06);
+	--domus-sb-active-bg-dark: #18212f;
+	--domus-sb-radius: 1px;
+	--domus-sb-x-gap: .1rem; /* «воздух» слева/справа от плашек */
+}
+
+/* === Применение к вертикальному меню Tabler === */
+.navbar-vertical {
+  /* Если хотите влиять ВЕСЬ текст в сайдбаре — раскомментируйте следующую строку */
+  font-size: var(--domus-sidebar-font-size); 
+  font-family: var(--domus-sidebar-font-family);
+}
+
+/* Подпись пунктов меню (только текст, без иконки) */
+.navbar-vertical .nav-link-title {
+  font-size: var(--domus-sidebar-font-size);
+  font-weight: var(--domus-sidebar-font-weight);
+}
+
+/* Иконка слева от подписи */
+.navbar-vertical .nav-link-icon .ti {
+  font-size: var(--domus-sidebar-icon-size);
+  line-height: 1; /* компактнее вертикально */
+}
+
+/* Немного плотнее делаем кликабельную область пункта меню (по желанию) */
+/* Закомментируйте, если не нужно */
+.navbar-vertical .nav-link {
+  padding-top: .7rem;
+  padding-bottom: .7rem;
+}
+
+/* Базовая форма ссылки меню: делаем её «плашкой» */
+.navbar-vertical .navbar-nav .nav-link {
+  border-radius: var(--domus-sb-radius);
+  margin-inline: var(--domus-sb-x-gap);
+  padding-inline: .75rem;               /* чуть шире кликабельная зона */
+  transition: background-color .15s ease, color .15s ease;
+}
+
+/* Светлая тема сайдбара (по умолчанию) */
+.navbar-vertical .navbar-nav .nav-link:hover {
+  background: var(--domus-sb-hover-bg-light);
+}
+.navbar-vertical .navbar-nav .nav-link.active {
+  background: var(--domus-sb-active-bg-light);
+}
+
+/* Тёмная тема сайдбара (когда на <aside> стоит navbar-dark или data-bs-theme="dark") */
+.navbar-vertical.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-vertical[data-bs-theme="dark"] .navbar-nav .nav-link:hover {
+  background: var(--domus-sb-hover-bg-dark);
+}
+.navbar-vertical.navbar-dark .navbar-nav .nav-link.active,
+.navbar-vertical[data-bs-theme="dark"] .navbar-nav .nav-link.active {
+  background: var(--domus-sb-active-bg-dark);
+  color: var(--tblr-white);              /* чтобы текст был читабельным */
+}
+
+/* На активном пункте иконка и подпись наследуют цвет */
+.navbar-vertical .nav-link.active .nav-link-title,
+.navbar-vertical .nav-link.active .nav-link-icon,
+.navbar-vertical .nav-link.active .nav-link-icon .ti {
+  color: inherit;
+}
+
+/* =========================================================
+   6) ШАХМАТКА ДЛЯ ДОМОВ (подъезды/этажи/квартиры)
+   ========================================================= */
+#chessboard {
+	display: flex; /* Горизонтальный ряд для подъездов */
+	gap: 5px; /* Уменьшение расстояния между подъездами */
+	justify-content: center; /* Центрирование шахматки */
+	align-items: flex-end; /* Выровнять подъезды по нижнему краю */
+}
+
+.entrance {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid #ddd;
+	margin: 5px;
+	padding: 5px;
+	background-color: #f9f9f9;
+}
+
+.entrance-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin: 0 5px;
+}
+
+.entrance-label {
+	margin-top: 5px;
+	font-size: 14px;
+	font-weight: bold;
+	color: #333;
+	text-align: center;
+}
+
+.floor {
+	display: flex; /* Квартиры на этаже отображаются в ряд */
+}
+
+/* Контейнер для колонки этажей */
+.floor-column-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-right: 10px;
+	margin-bottom: 35px;
+}
+
+/* Заголовок "Этаж" */
+.floor-column-header {
+	font-weight: bold;
+	text-align: center;
+	width: 50px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Ячейки с номерами этажей */
+.floor-numbers {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.floor-number {
+	height: 25px;
+	width: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	background-color: #f0f0f0;
+	border: 1px solid #ccc;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.apartment {
+	width: 25px;
+	height: 25px;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	border: 1px solid #ccc;
+	margin: 2px;
+	background-color: #f1f1f1;
+	font-size: 10px;
+	font-weight: bold;
+}
+
+.apartment.non-residential {
+	background-color: #d3d3d3; /* Серый цвет для нежилых квартир */
+	color: #666;
+	cursor: not-allowed;
+}
+
+.apartment.occupied, .parking-spot.occupied,.storage-unit.occupied {
+	background-color: #FFC107;
+}
+
+/* =========================================================
+   8) ПАРКИНГ И КЛАДОВЫЕ (уровни, сетки, ячейки)
+   ========================================================= */
+.parking-level, .storage-level {
+	margin-top: 20px;
+	border: 1px solid #ddd;
+	padding: 10px;
+	background-color: #f9f9f9;
+	border-radius: 8px;
+}
+
+.parking-level h3, .storage-level h3 {
+	margin-bottom: 10px;
+	font-size: 16px;
+	text-align: center;
+}
+
+.parking-grid, .storage-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 25px); /* Автоматически подстраивает количество колонок */
+	gap: 5px;
+	justify-content: center;
+}
+
+.parking-spot, .storage-unit {
+	width: 25px;
+	height: 25px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #e0e0e0;
+	border: 1px solid #ccc;
+	font-size: 12px;
+	font-weight: bold;
+	border-radius: 4px;
+	text-align: center;
+}

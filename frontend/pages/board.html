@@ -4,13 +4,12 @@
 <meta charset="utf-8" />
 <title>Шахматка дома</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<!-- Bootstrap (если уже подключён глобально — можно убрать) -->
-<link
-	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-	rel="stylesheet"
-	crossorigin="anonymous"
-/>
-<link rel="stylesheet" href="../assets/styles.css" />
+	<!-- Tabler CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
+	<!-- Иконки -->
+	<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
+	<!-- Персонализация проекта -->
+	<link rel="stylesheet" href="../assets/styles.css" />
 </head>
 <body class="container py-3">
 <h1 class="h4 mb-3">Публичная шахматка</h1>
@@ -24,6 +23,11 @@
 <div id="board"></div>
 
 <script src="../scripts/config.js"></script>
-<script src="../scripts/board.js"></script>
+<script src="../scripts/ui.js"></script>
+<script src="../scripts/auth-guard.js"></script>
+<script src="../scripts/layout.js"></script>
+<script src="../scripts/board.js" defer></script>
+<!-- Tabler JS -->
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
 </body>
 </html>
