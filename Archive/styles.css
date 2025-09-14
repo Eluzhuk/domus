@@ -1,0 +1,452 @@
+/* =========================================================
+   1) БАЗА (типографика, общие отступы, форматы)
+   ========================================================= */
+body {
+  /* Не делаем flex на всём body, это ломает layout Tabler */
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+h1 {
+	text-align: center;
+	margin: 0 0 20px;
+}
+
+form {
+	display: flex;
+	flex-direction: column;
+}
+
+label, input, button {
+	margin-bottom: 15px;
+}
+
+/* =========================================================
+
+   2)Компоновка передана Tabler. Кастомные .container/.sidebar/.content удалены. */
+
+/* =========================================================
+   3) КНОПКИ (общая кнопка)
+   ========================================================= */
+.button {
+	padding: 10px 20px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	cursor: pointer;
+	border-radius: 5px;
+	transition: background-color 0.3s, transform 0.2s;
+}
+
+.button:hover {
+	background-color: #45a049;
+	transform: scale(1.05);
+}
+
+/* =========================================================
+   4) КАРТОЧКИ ДОМОВ (список, карточка, action-кнопки)
+   ========================================================= */
+#housesContainer {
+	display: flex; /* Включаем flexbox */
+	flex-wrap: wrap; /* Автоматический перенос на новую строку */
+	gap: 20px; /* Расстояние между карточками */
+	justify-content: left; /* Центрируем карточки */
+}
+
+.house-card {
+	position: relative; /* Для позиционирования кнопок внутри карточки */
+	width: 300px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	background-color: #fff;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	transition: box-shadow 0.3s;
+}
+
+.house-card h2 {
+	margin-bottom: 10px;
+}
+
+.house-card p {
+	font-size: 14px;
+	color: #444;
+	margin: 5px 0;
+}
+
+.house-card:hover {
+	box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Добавляем эффект наведения */
+}
+
+/* Кнопки внутри карточки: редактирование/удаление/добавление жильца */
+.edit-house,
+.delete-house {
+	opacity: 0; /* Скрываем кнопки по умолчанию */
+	pointer-events: none; /* Отключаем взаимодействие */
+	transition: opacity 0.3s;
+}
+
+.house-card:hover .edit-house,
+.house-card:hover .delete-house {
+	opacity: 1; /* Показываем кнопки при наведении */
+	pointer-events: auto; /* Включаем взаимодействие */
+}
+
+.edit-house {
+	position: absolute;
+	top: 10px;
+	right: 35px; /* Располагаем слева */
+	width: 20px;
+	height: 20px;
+	background-color: rgb(255, 243, 131);
+	border: none;
+	border-radius: 50%; /* Делает кнопку круглой */
+	color: white;
+	font-size: 16px;
+	font-weight: bold;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
+	transition: background-color 0.3s, transform 0.2s;
+}
+
+.edit-house:hover {
+	background-color: rgb(255, 217, 0);
+	transform: scale(1.1);
+}
+
+.edit-house:before {
+	content: '✎'; /* Карандаш как символ редактирования */
+	font-size: 14px; /* Размер карандаша */
+	line-height: 1;
+}
+
+.delete-house {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	width: 20px;
+	height: 20px;
+	background-color: rgb(247, 127, 127);
+	border: none;
+	border-radius: 50%;
+	color: white;
+	font-size: 18px;
+	font-weight: bold;
+	cursor: pointer;
+	display: flex; /* Используем Flexbox */
+	justify-content: center; /* Горизонтальное центрирование */
+	align-items: center; /* Вертикальное центрирование */
+	transition: background-color 0.3s, transform 0.2s;
+}
+
+.delete-house:hover {
+	background-color: rgb(197, 8, 8);
+	transform: scale(1.1);
+}
+
+.delete-house:before {
+	content: '×'; /* Белый крестик */
+	line-height: 1; /* Убирает лишнее вертикальное смещение */
+}
+
+.add-resident {
+	position: absolute;
+	top: 10px;
+	right: 60px; /* Располагаем после кнопки "Редактировать" */
+	width: 20px;
+	height: 20px;
+	background-color: rgb(162, 241, 162);
+	border: none;
+	border-radius: 50%; /* Круглая форма */
+	color: white;
+	font-size: 20px;
+	font-weight: bold;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
+	transition: background-color 0.3s, transform 0.2s;
+	opacity: 0; /* Скрыта по умолчанию */
+	pointer-events: none; /* Отключение взаимодействия */
+}
+
+.add-resident:hover {
+	background-color: darkgreen;
+	transform: scale(1.1);
+}
+
+.add-resident:before {
+	content: '+'; /* Белый плюс внутри кружка */
+	line-height: 1;
+}
+
+.house-card:hover .add-resident {
+	opacity: 1; /* Показать при наведении */
+	pointer-events: auto; /* Включение взаимодействия */
+}
+
+/* =========================================================
+   5) МОДАЛЬНЫЕ ОКНА
+   ========================================================= */
+.modal {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	overflow: auto;
+	background-color: rgba(0, 0, 0, 0.5);
+	justify-content: center;
+	align-items: center;
+}
+
+.modal-content {
+	background-color: #fff;
+	margin: 10% auto;
+	padding: 20px;
+	border: 1px solid #888;
+	border-radius: 8px;
+	width: 500px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	position: relative;
+}
+
+.close {
+	position: absolute;
+	color: #aaa;
+	float: right;
+	font-size: 28px;
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.close:hover, .close:focus {
+	color: black;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+/* =========================================================
+   6) ШАХМАТКА ДЛЯ ДОМОВ (подъезды/этажи/квартиры)
+   ========================================================= */
+#chessboard {
+	display: flex; /* Горизонтальный ряд для подъездов */
+	gap: 5px; /* Уменьшение расстояния между подъездами */
+	justify-content: center; /* Центрирование шахматки */
+	align-items: flex-end; /* Выровнять подъезды по нижнему краю */
+}
+
+.entrance {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid #ddd;
+	margin: 5px;
+	padding: 5px;
+	background-color: #f9f9f9;
+}
+
+.entrance-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin: 0 5px;
+}
+
+.entrance-label {
+	margin-top: 5px;
+	font-size: 14px;
+	font-weight: bold;
+	color: #333;
+	text-align: center;
+}
+
+.floor {
+	display: flex; /* Квартиры на этаже отображаются в ряд */
+}
+
+/* Контейнер для колонки этажей */
+.floor-column-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-right: 10px;
+	margin-bottom: 35px;
+}
+
+/* Заголовок "Этаж" */
+.floor-column-header {
+	font-weight: bold;
+	text-align: center;
+	width: 50px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Ячейки с номерами этажей */
+.floor-numbers {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.floor-number {
+	height: 25px;
+	width: 25px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	background-color: #f0f0f0;
+	border: 1px solid #ccc;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.apartment {
+	width: 25px;
+	height: 25px;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	border: 1px solid #ccc;
+	margin: 2px;
+	background-color: #f1f1f1;
+	font-size: 10px;
+	font-weight: bold;
+}
+
+.apartment.non-residential {
+	background-color: #d3d3d3; /* Серый цвет для нежилых квартир */
+	color: #666;
+	cursor: not-allowed;
+}
+
+.apartment.occupied, .parking-spot.occupied,.storage-unit.occupied {
+	background-color: rgb(255, 255, 18);
+}
+
+/* =========================================================
+   7) ТУЛТИП (подсказка о жильцах)
+   ========================================================= */
+#tooltip {
+	position: absolute;
+	z-index: 9999;
+	background-color: white;
+	border: 1px solid #ccc;
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transition: opacity 0.2s ease-in-out;
+}
+
+#tooltip.hidden {
+	display: none;
+	opacity: 0;
+}
+
+#tooltip.visible {
+	display: block;
+	opacity: 1;
+}
+
+/* =========================================================
+   8) ПАРКИНГ И КЛАДОВЫЕ (уровни, сетки, ячейки)
+   ========================================================= */
+.parking-level, .storage-level {
+	margin-top: 20px;
+	border: 1px solid #ddd;
+	padding: 10px;
+	background-color: #f9f9f9;
+	border-radius: 8px;
+}
+
+.parking-level h3, .storage-level h3 {
+	margin-bottom: 10px;
+	font-size: 16px;
+	text-align: center;
+}
+
+.parking-grid, .storage-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 25px); /* Автоматически подстраивает количество колонок */
+	gap: 5px;
+	justify-content: center;
+}
+
+.parking-spot, .storage-unit {
+	width: 25px;
+	height: 25px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #e0e0e0;
+	border: 1px solid #ccc;
+	font-size: 12px;
+	font-weight: bold;
+	border-radius: 4px;
+	text-align: center;
+}
+
+/* 9) Адаптивностью управляет Tabler. Кастомные медиа-правила под старый сайдбар удалены. */
+
+/* =========================================================
+   10) УТИЛИТЫ: поля с переключателями видимости
+   ========================================================= */
+.field-with-visibility { position: relative; display: flex; align-items: center; gap: 8px; }
+.field-with-visibility input { flex: 1; }
+.vis-toggle { border: none; background: transparent; cursor: pointer; font-size: 16px; opacity: .7; }
+.vis-toggle[aria-pressed="true"] { opacity: 1; }
+.vis-toggle .fa-eye-slash { color: #c33; }
+
+/* --- Domus UI (Tabler-based) --- */
+/* Регулируемые переменные: ширина сайдбара и левый отступ пунктов */
+:root{
+  --domus-sidebar-width: 400px;    /* ← меняйте ширину сайдбара тут */
+  --domus-sidebar-padding-x: 16px; /* ← и отступ пунктов меню тут */
+}
+
+/* Делаем вертикальный сайдбар фиксированным слева и задаём ширину */
+.navbar-vertical{
+  position: fixed;
+  inset: 0 auto 0 0;           /* top:0; right:auto; bottom:0; left:0 */
+  width: var(--domus-sidebar-width);
+}
+
+/* Контентная часть — справа от сайдбара, в колонку (для «липкого» футера) */
+.page-wrapper{
+  margin-left: var(--domus-sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.page-body{ flex:1 1 auto; }   /* растём, чтобы футер прижимался вниз */
+.footer{ flex-shrink:0; margin-top:auto; }
+
+/* Хедер занимает всю ширину своей области (то есть до сайдбара не доходит и под него не уходит) */
+#layout-header, #layout-header > .navbar{ width:100%; }
+#layout-header .container-fluid{ max-width:none; width:100%; padding-left:1rem; padding-right:1rem; }
+
+/* Сайдбар: вертикальное выравнивание и регулируемый левый отступ */
+.navbar-vertical .nav-link{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  text-align:left !important;
+  padding-left: var(--domus-sidebar-padding-x) !important;
+}
+.navbar-vertical .nav-link .nav-link-icon{
+  width:1.25rem; height:1.25rem;
+  display:inline-flex; align-items:center; justify-content:center;
+  margin-right:.4rem;
+}
+.navbar-vertical .nav-link .nav-link-title{ flex:1 1 auto; }
