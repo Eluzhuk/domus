@@ -2,7 +2,7 @@
 
 const { Resident, ResidentApartment, ResidentParking, ResidentStorage, Apartment, Parking, StorageUnit, House, Entrance, ResidentPrivacy } = require('../models');
 const sequelize = require('../db');
-const { Op } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
 
 // Сохранение квартир
 async function syncApartments(residentId, apartments, houseId) {
@@ -14,7 +14,7 @@ async function syncApartments(residentId, apartments, houseId) {
 					where: {
 						apartment_number: apartment.number,
 						entrance_id: {
-							[Op.in]: sequelize.literal(`(
+							[Op.in]: Sequelize.literal(`(
 									SELECT id FROM entrances WHERE house_id = ${houseId}
 							)`)
 						}

@@ -48,19 +48,44 @@ exports.getAllHouses = async (req, res) => {
 			  const totalParkingSpots = house.Parkings.reduce((acc, parking) => acc + parking.spots_count, 0);
 			  const totalStorages = house.StorageUnits.reduce((acc, storage) => acc + storage.units_count, 0);
 
-			  // Заселенные объекты
-			  const occupiedApartments = house.Entrances.reduce((acc, entrance) => {
-					return acc + entrance.Apartments.filter(apartment => {
-						 if (apartment.ResidentApartments.length > 0) {
-							  apartment.ResidentApartments.forEach(res => totalResidents.add(res.Resident.id));
-							  return true;
-						 }
-						 return false;
-					}).length;
-			  }, 0);
+			// Заселенные объекты
+			const occupiedApartments = house.Entrances.reduce((acc, entrance) => {
+			return acc + entrance.Apartments.filter(apartment => {
+				if (apartment.ResidentApartments.length > 0) {
+					apartment.ResidentApartments.forEach(res => totalResidents.add(res.Resident.id));
+					return true;
+				}
+				return false;
+			}).length;
+			}, 0);
 
-			  const occupiedParking = house.Parkings.reduce((acc, parking) => acc + parking.ResidentParkings.length, 0);
-			  const occupiedStorages = house.StorageUnits.reduce((acc, storage) => acc + storage.ResidentStorages.length, 0);
+			// 🔹 Паркинг: считаем УНИКАЛЬНЫЕ места по spot_number из resident_parkings
+			const occupiedParking = (() => {
+			const spots = new Set();
+			for (const parking of house.Parkings) {
+				for (const rp of (parking.ResidentParkings || [])) {
+					const val = rp?.spot_number;
+					if (val !== undefined && val !== null && String(val).trim() !== '') {
+					spots.add(String(val).trim());
+					}
+				}
+			}
+			return spots.size;
+			})();
+
+			// 🔹 Кладовые: считаем УНИКАЛЬНЫЕ помещения по unit_number из resident_storage
+			const occupiedStorages = (() => {
+			const units = new Set();
+			for (const storage of house.StorageUnits) {
+				for (const rs of (storage.ResidentStorages || [])) {
+					const val = rs?.unit_number;
+					if (val !== undefined && val !== null && String(val).trim() !== '') {
+					units.add(String(val).trim());
+					}
+				}
+			}
+			return units.size;
+			})();
 
 			  // Вычисляем процент заселенности (с округлением до целых чисел)
 			  const apartmentOccupancyRate = totalApartments ? Math.round((occupiedApartments / totalApartments) * 100) : 0;

@@ -222,3 +222,14 @@
 	border-radius: 4px;
 	text-align: center;
 }
+
+/* === Domus / Houses card helpers === */
+.ratio .img-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* заполняем, сохраняя кроп */
+}
+.card .metric-label {
+  font-size: .75rem;
+  color: var(--tblr-secondary);
+}
