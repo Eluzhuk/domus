@@ -15,8 +15,54 @@ function mask(v){ return String(v||'').replace(/[0-9A-Za-zА-Яа-яЁё]/g, '*'
 /** Bootstrap helpers */
 const BSM = () => window.bootstrap?.Modal || bootstrap.Modal;
 const BSO = () => window.bootstrap?.Offcanvas || bootstrap.Offcanvas;
-function showModalById(id){ const el = $(id); if(!el) return null; const m = new (BSM())(el); m.show(); return m; }
-function showOffcanvasById(id){ const el = $(id); if(!el) return null; const o = new (BSO())(el); o.show(); return o; }
+const BST = () => window.bootstrap?.Toast || bootstrap.Toast;
+
+function showModalById(id){
+  const el = $(id); if(!el) return null;
+  const m = new (BSM())(el); m.show(); return m;
+}
+function showOffcanvasById(id){
+  const el = $(id); if(!el) return null;
+  const o = new (BSO())(el); o.show(); return o;
+}
+
+/**
+ * Показать тост-уведомление
+ * @param {'success'|'danger'|'info'|'warning'} variant
+ * @param {string} message
+ * @param {string} [title]
+ */
+function showToast(variant, message, title){
+  const cont = $('#toastContainer') || (() => {
+    const d = document.createElement('div');
+    d.id = 'toastContainer';
+    d.className = 'toast-container position-fixed top-0 end-0 p-3';
+    d.style.zIndex = '1080';
+    document.body.appendChild(d);
+    return d;
+  })();
+
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-bg-${variant} border-0`;
+  toast.setAttribute('role','alert');
+  toast.setAttribute('aria-live','assertive');
+  toast.setAttribute('aria-atomic','true');
+
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        ${title ? `<div class="fw-bold mb-1">${title}</div>` : ``}
+        ${message}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>`;
+
+  cont.appendChild(toast);
+  const t = new (BST())(toast, { delay: 2500 });
+  t.show();
+  toast.addEventListener('hidden.bs.toast', () => toast.remove());
+}
+
 
 /** Иконки-глаза для приватности (кнопки в модалках) */
 function initPrivacyIconToggles(modalEl){
@@ -340,6 +386,7 @@ function hookAddButtons(){
 }
 
 /** Сабмит "Добавить жильца" */
+/** Сабмит "Добавить жильца" */
 function hookAddResidentSubmit(){
   $('#addResidentForm')?.addEventListener('submit', async function(e){
     e.preventDefault();
@@ -384,15 +431,20 @@ function hookAddResidentSubmit(){
       });
       if(resp.ok){
         new (BSM())($('#addResidentModal')).hide();
-        location.reload();
+        showToast('success', 'Жилец успешно добавлен', 'Успех');
+        setTimeout(()=> location.reload(), 1200);
       }else{
         const err = await resp.json().catch(()=>({}));
-        alert('Ошибка: ' + (err.message || resp.status));
+        showToast('danger', err.message || `Ошибка добавления (HTTP ${resp.status})`, 'Ошибка');
       }
-    }catch(e){ alert('Ошибка соединения'); }
+    }catch(e){
+      console.error(e);
+      showToast('danger', 'Ошибка подключения к серверу', 'Сеть');
+    }
   });
 }
 
+/** Отвязка жильца */
 /** Отвязка жильца */
 function hookDetach(){
   document.addEventListener('click', async (e)=>{
@@ -410,12 +462,17 @@ function hookDetach(){
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ relation, relation_id: relationId })
       });
-      if(resp.ok){ location.reload(); }
-      else{
+      if(resp.ok){
+        showToast('success', 'Жилец отвязан от объекта', 'Готово');
+        setTimeout(()=> location.reload(), 1000);
+      }else{
         const err=await resp.json().catch(()=>({}));
-        alert('Ошибка: ' + (err.message || resp.status));
+        showToast('danger', err.message || `Ошибка отвязки (HTTP ${resp.status})`, 'Ошибка');
       }
-    }catch{ alert('Ошибка соединения'); }
+    }catch(e){
+      console.error(e);
+      showToast('danger', 'Ошибка подключения к серверу', 'Сеть');
+    }
   });
 }
 
@@ -568,22 +625,27 @@ function hookEditSubmit(){
       data.storages.push({number:parseInt(num,10), tenant:!!(chk&&chk.checked)});
     });
 
-    try{
-      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${idNum}`, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(data)
-      });
-      if(resp.ok){
-        new (BSM())($('#editResidentModal')).hide();
-        location.reload();
-      }else{
-        const err = await resp.json().catch(()=>({}));
-        alert('Ошибка: '+(err.message||resp.status));
-      }
-    }catch{
-      alert('Ошибка соединения');
-    }
+try{
+  const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${idNum}`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+
+  if(resp.ok){
+    // Скрываем модалку, показываем успешный тост и затем мягкая перезагрузка
+    new (BSM())($('#editResidentModal')).hide();
+    showToast('success', 'Данные жильца успешно обновлены', 'Успех');
+    setTimeout(()=> location.reload(), 1200);
+  }else{
+    const err = await resp.json().catch(()=>({}));
+    showToast('danger', err.message || `Ошибка обновления (HTTP ${resp.status})`, 'Ошибка');
+  }
+}catch(e){
+  console.error(e);
+  showToast('danger', 'Ошибка подключения к серверу', 'Сеть');
+}
+
   });
 }
 
