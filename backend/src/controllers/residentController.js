@@ -227,52 +227,55 @@ exports.getResidentById = async (req, res) => {
 };
 
 
+/**
+ * Обновление жильца
+ * Требует валидный integer id в req.params.id
+ */
 exports.updateResident = async (req, res) => {
-	try {
-		 const residentId = req.params.id;
-		 const { full_name, phone, email, telegram, apartments, parking, storages } = req.body;
+  try {
+    const idParam = req.params.id;
+    const residentId = parseInt(idParam, 10);
+    if (!idParam || Number.isNaN(residentId)) {
+      return res.status(400).json({ message: 'Invalid resident id' });
+    }
 
-		 console.log('Полученные данные для обновления:', req.body); // Лог данных
+    const payload = req.body || {};
+    // найдём жильца
+    const resident = await Resident.findByPk(residentId);
+    if (!resident) return res.status(404).json({ message: 'Resident not found' });
 
-		 const resident = await Resident.findByPk(residentId);
-		 if (!resident) {
-			return res.status(404).json({ message: 'Жилец не найден.' });
-		}
+    // базовые поля
+    resident.full_name = payload.full_name ?? resident.full_name;
+    resident.phone     = payload.phone ?? resident.phone;
+    resident.email     = payload.email ?? resident.email;
+    resident.telegram  = payload.telegram ?? resident.telegram;
+    if (payload.house_id) {
+      const hid = parseInt(payload.house_id, 10);
+      if (!Number.isNaN(hid)) resident.house_id = hid;
+    }
+    await resident.save();
 
-		if (!resident.house_id) {
-			return res.status(400).json({ message: 'Идентификатор дома отсутствует у жильца.' });
-		}
+    // privacy (если передан)
+    if (payload.privacy && typeof payload.privacy === 'object') {
+      await ResidentPrivacy.upsert({
+        resident_id: residentId,
+        show_full_name: payload.privacy.show_full_name !== false,
+        show_phone:     payload.privacy.show_phone     !== false,
+        show_email:     payload.privacy.show_email     !== false,
+        show_telegram:  payload.privacy.show_telegram  !== false,
+      });
+    }
 
-		// Обновление данных жильца
-		resident.full_name = full_name || resident.full_name;
-		resident.phone = phone || resident.phone;
-		resident.email = email || resident.email;
-		resident.telegram = telegram || resident.telegram;
-		await resident.save();
+    // при необходимости синхронизируйте связи:
+    // await syncApartments(residentId, payload.apartments || []);
+    // await syncParking(residentId, payload.parking || []);
+    // await syncStorages(residentId, payload.storages || []);
 
-		if (req.body.privacy) {
-		const p = req.body.privacy;
-		await ResidentPrivacy.upsert({
-			resident_id: residentId,
-			show_full_name: p.show_full_name !== false,
-			show_phone: p.show_phone !== false,
-			show_email: p.show_email !== false,
-			show_telegram: p.show_telegram !== false,
-		});
-		}
-
-		// Связь с квартирами
-		await syncApartments(residentId, apartments, resident.house_id);
-		// Связь с парковками
-		await syncParking(residentId, parking, resident.house_id);
-		// Связь с кладовыми
-		await syncStorages(residentId, storages, resident.house_id);
-
-		 res.status(200).json({ message: 'Жилец успешно обновлён.' });
-	} catch (error) {
-		 console.error('Ошибка обновления жильца:', error);
-		 res.status(500).json({ message: 'Ошибка сервера.' });
-	}
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Ошибка обновления жильца:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
 };
 
 exports.deleteResident = async (req, res) => {

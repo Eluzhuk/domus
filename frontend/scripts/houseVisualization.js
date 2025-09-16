@@ -175,29 +175,35 @@ function openResidentDrawerFor(type, number, links){
 
     const card=document.createElement('div');
     card.className='card card-sm mb-2';
-    card.innerHTML = `
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <div>
-            <div class="fw-bold">${showName ? (res.full_name||'—') : mask(res.full_name)}</div>
-            ${res.phone ? `<div class="text-secondary small">Тел: ${showPhone ? res.phone : mask(res.phone)}</div>` : ''}
-            ${res.email ? `<div class="text-secondary small">Email: ${showEmail ? res.email : mask(res.email)}</div>` : ''}
-            ${res.telegram ? `<div class="text-secondary small">Telegram: ${showTelegram ? res.telegram : mask(res.telegram)}</div>` : ''}
-          </div>
-          <div class="btn-list">
-            <button class="btn btn-ghost-secondary btn-icon edit-resident" title="Редактировать" data-id="${res.id || ''}">
-              <i class="ti ti-edit"></i>
-            </button>
-            <button class="btn btn-ghost-danger btn-icon delete-resident"
-                    title="Отвязать"
-                    data-id="${res.id || ''}"
-                    data-relation="${'spot_number' in link ? 'parking' : ('unit_number' in link ? 'storage' : 'apartment')}"
-                    data-relation-id="${link.id}">
-              <i class="ti ti-unlink"></i>
-            </button>
-          </div>
-        </div>
-      </div>`;
+const relationType = ('spot_number' in link) ? 'parking' : (('unit_number' in link) ? 'storage' : 'apartment');
+const hasValidId = Number.isFinite(Number(res.id));
+const editBtn = hasValidId
+  ? `<button class="btn btn-ghost-secondary btn-icon edit-resident" title="Редактировать" data-id="${Number(res.id)}">
+       <i class="ti ti-edit"></i>
+     </button>`
+  : ''; // нет id — не показываем кнопку редактирования
+
+	card.innerHTML = `
+	<div class="card-body">
+		<div class="d-flex justify-content-between">
+			<div>
+			<div class="fw-bold">${showName ? (res.full_name||'—') : mask(res.full_name)}</div>
+			${res.phone ? `<div class="text-secondary small">Тел: ${showPhone ? res.phone : mask(res.phone)}</div>` : ''}
+			${res.email ? `<div class="text-secondary small">Email: ${showEmail ? res.email : mask(res.email)}</div>` : ''}
+			${res.telegram ? `<div class="text-secondary small">Telegram: ${showTelegram ? res.telegram : mask(res.telegram)}</div>` : ''}
+			</div>
+			<div class="btn-list">
+			${editBtn}
+			<button class="btn btn-ghost-danger btn-icon delete-resident"
+						title="Отвязать"
+						data-id="${hasValidId ? Number(res.id) : ''}"
+						data-relation="${relationType}"
+						data-relation-id="${link.id}">
+				<i class="ti ti-unlink"></i>
+			</button>
+			</div>
+		</div>
+	</div>`;
     body.appendChild(card);
   });
 
@@ -413,10 +419,17 @@ function hookDetach(){
   });
 }
 
-/** Загрузка жильца и открытие модалки редактирования */
-async function openEditResidentModal(residentId){
-  try{
-    const r = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
+	/** Загрузка жильца и открытие модалки редактирования */
+	async function openEditResidentModal(residentId){
+	// приводим входной id к числу и валидируем
+	const idNum = parseInt(String(residentId ?? '').trim(), 10);
+	if (!idNum || Number.isNaN(idNum)) {
+		alert('Ошибка: некорректный ID жильца.');
+		console.warn('openEditResidentModal → bad residentId:', residentId);
+		return;
+	}
+	try{
+		const r = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${idNum}`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
 
@@ -488,21 +501,46 @@ async function openEditResidentModal(residentId){
       if(e.target.closest('.remove-field')) e.target.closest('.remove-field').closest('.mb-2')?.remove();
     });
 
-    // сохраняем id
-    const form = $('#editResidentForm');
-    form.dataset.residentId = d.id;
-    form.dataset.houseId = d.house_id || new URLSearchParams(location.search).get('id') || '';
+	// ✅ Надёжно сохраняем ID в dataset и скрытом поле (берём ИЗ ПАРАМЕТРА idNum)
+	const form = $('#editResidentForm');
+	form.dataset.residentId = String(idNum);
+	form.dataset.houseId = String(d.house_id || new URLSearchParams(location.search).get('id') || '');
 
-    showModalById('#editResidentModal');
-  }catch(e){ alert('Ошибка загрузки данных жильца'); }
-}
+	let hiddenId = form.querySelector('input[type="hidden"][name="resident_id"]');
+	if (!hiddenId) {
+	hiddenId = document.createElement('input');
+	hiddenId.type = 'hidden';
+	hiddenId.name = 'resident_id';
+	form.appendChild(hiddenId);
+	}
+	hiddenId.value = String(idNum);
+
+
+		showModalById('#editResidentModal');
+
+	}catch(e){ alert('Ошибка загрузки данных жильца'); }
+	}
 
 /** Сабмит редактирования жильца */
 function hookEditSubmit(){
   $('#editResidentForm')?.addEventListener('submit', async function(e){
     e.preventDefault();
-    const id=this.dataset.residentId;
-    const houseId=this.dataset.houseId;
+
+    // достаём id из dataset или из hidden и валидируем
+    let id = this.dataset.residentId ?? this.querySelector('input[name="resident_id"]')?.value;
+    id = String(id || '').trim();
+    const idNum = parseInt(id, 10);
+    if (!id || Number.isNaN(idNum)) {
+      alert('Ошибка: не удалось определить ID жильца. Закройте окно и откройте «Редактировать» снова.');
+      console.error('edit submit → bad id:', id);
+      return;
+    }
+
+    const houseId = this.dataset.houseId;
+    if (!houseId) {
+      alert('Ошибка: не найден идентификатор дома.');
+      return;
+    }
 
     const data = {
       full_name: $('#editFullName').value,
@@ -531,12 +569,21 @@ function hookEditSubmit(){
     });
 
     try{
-      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${id}`, {
-        method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
+      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${idNum}`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(data)
       });
-      if(resp.ok){ new (BSM())($('#editResidentModal')).hide(); location.reload(); }
-      else{ const err = await resp.json().catch(()=>({})); alert('Ошибка: '+(err.message||resp.status)); }
-    }catch{ alert('Ошибка соединения'); }
+      if(resp.ok){
+        new (BSM())($('#editResidentModal')).hide();
+        location.reload();
+      }else{
+        const err = await resp.json().catch(()=>({}));
+        alert('Ошибка: '+(err.message||resp.status));
+      }
+    }catch{
+      alert('Ошибка соединения');
+    }
   });
 }
 

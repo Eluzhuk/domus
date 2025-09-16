@@ -248,3 +248,8 @@
 
 /* Мелкие улучшения */
 #houseMeta { margin-top: .25rem; }
+
+/* Domus: тосты поверх контента/оффканвасов */
+#domus-toast-root {
+  z-index: 1100; /* выше .modal/.offcanvas backdrop */
+}
