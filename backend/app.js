@@ -57,20 +57,6 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
 .then(async () => {
 	console.log('Подключение к базе данных успешно');
-
-	// Создадим таблицу resident_privacy, если её нет (как и раньше)
-	await sequelize.query(`
-		CREATE TABLE IF NOT EXISTS resident_privacy (
-		id SERIAL PRIMARY KEY,
-		resident_id INTEGER UNIQUE REFERENCES residents(id) ON DELETE CASCADE,
-		show_full_name BOOLEAN DEFAULT FALSE,
-		show_phone     BOOLEAN DEFAULT FALSE,
-		show_email     BOOLEAN DEFAULT FALSE,
-		show_telegram  BOOLEAN DEFAULT FALSE
-		);
-	`);
-	console.log('resident_privacy готова');
-
 	app.listen(PORT, () => {
 		console.log(`Сервер запущен на http://localhost:${PORT}`);
 		console.log(`CORS ORIGIN: ${ALLOWED_ORIGIN} (credentials: true)`);
