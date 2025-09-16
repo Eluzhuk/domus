@@ -1,194 +1,283 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="light">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Визуализация дома</title>
-	<!-- Tabler CSS -->
-	<link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
-	<!-- Иконки -->
-	<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
-	<!-- Персонализация проекта -->
-	<link rel="stylesheet" href="../assets/styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Визуализация дома</title>
+  <!-- Tabler CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
+  <!-- Tabler Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
+  <!-- Проектные стили -->
+  <link rel="stylesheet" href="../assets/styles.css"/>
 </head>
 <body>
-	<main class="content" id="main" tabindex="-1">
-		<h1 id="houseName">Название дома</h1>
+  <main class="content" id="main" tabindex="-1">
+    <!-- Шапка страницы -->
+    <div class="container-xl">
+      <div class="page-header d-print-none">
+        <div class="row align-items-center">
+          <div class="col">
+            <h2 class="page-title" id="houseName">Визуализация дома</h2>
+            <div class="text-secondary" id="houseMeta"><!-- адрес / метрики --></div>
+          </div>
+          <div class="col-auto ms-auto d-print-none">
+            <div class="btn-list">
+              <a href="houses.html" class="btn btn-ghost-secondary">
+                <i class="ti ti-arrow-left"></i> Назад к домам
+              </a>
+              <button id="openAddResidentBlank" class="btn btn-primary">
+                <i class="ti ti-user-plus"></i> Добавить жильца
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-		<section aria-labelledby="chessboard-heading">
-			<div id="chessboard"></div>
-		</section>
+    <!-- Карточка с шахматкой -->
+    <div class="container-xl">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="chessboard-heading">Квартиры</h3>
+          <div class="card-actions">
+            <div class="text-secondary small" id="boardLegend">
+              <span class="badge me-1" style="background:#e0e0e0;color:#000;">Свободно</span>
+              <span class="badge bg-yellow me-1">Занято</span>
+              <span class="badge bg-muted">Нежилой этаж</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <!-- Обёртка: липкие колонки этажей + горизонтальный скролл -->
+          <div class="domus-board">
+            <div class="floors-col floors-col-left">
+              <div class="floors-col-header">Этаж</div>
+              <div class="floors-col-body" id="floorsLeft"><!-- ряды этажей --></div>
+            </div>
 
-		<section aria-labelledby="parking-heading">
-			<h2 id="parking-heading">Парковочные места</h2>
-			<div id="parking"></div>
-		</section>
+            <div class="board-scroll">
+              <div class="entrances" id="chessboard"><!-- колонки подъездов --></div>
+            </div>
 
-		<section aria-labelledby="storages-heading">
-			<h2 id="storages-heading">Кладовые</h2>
-			<div id="storages"></div>
-		</section>
-	</main>
+            <div class="floors-col floors-col-right">
+              <div class="floors-col-header">Этаж</div>
+              <div class="floors-col-body" id="floorsRight"><!-- ряды этажей --></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Всплывающая подсказка -->
-	<div id="tooltip" class="hidden" role="tooltip" aria-hidden="true"></div>
+      <!-- Паркинг -->
+      <div class="card mt-3" id="parkingCard">
+        <div class="card-header">
+          <h3 class="card-title" id="parking-heading">Парковочные места</h3>
+        </div>
+        <div class="card-body">
+          <div id="parking"></div>
+        </div>
+      </div>
 
-	<!-- Модалка: Редактировать жильца -->
-	<div id="editResidentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editResidentTitle" aria-hidden="true">
-		<div class="modal-content">
-			<button type="button" class="close" aria-label="Закрыть">&times;</button>
-			<h2 id="editResidentTitle">Редактировать жильца</h2>
+      <!-- Кладовые -->
+      <div class="card mt-3" id="storagesCard">
+        <div class="card-header">
+          <h3 class="card-title" id="storages-heading">Кладовые</h3>
+        </div>
+        <div class="card-body">
+          <div id="storages"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 
-			<form id="editResidentForm">
-				<label for="residentFullName">ФИО *</label>
-				<input type="text" id="residentFullName" name="full_name" placeholder="ФИО" required autocomplete="name" />
+  <!-- Drawer (Offcanvas): сведения по ячейке/жильцам -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="residentDrawer" aria-labelledby="residentDrawerTitle">
+    <div class="offcanvas-header">
+      <h2 class="offcanvas-title" id="residentDrawerTitle">Помещение</h2>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button>
+    </div>
+    <div class="offcanvas-body" id="residentDrawerBody">
+      <!-- Контент заполняется из JS -->
+    </div>
+  </div>
 
-				<label for="residentTelegram">Телеграм</label>
-				<div class="field-with-visibility">
-					<input type="text" id="residentTelegram" name="telegram" autocomplete="off" />
-					<button type="button" class="vis-toggle" data-target="residentTelegram" aria-controls="residentTelegram" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Телеграм</span>
-					</button>
-				</div>
+  <!-- Modal: Добавить жильца (Tabler) -->
+  <div class="modal modal-blur fade" id="addResidentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <form id="addResidentForm">
+          <div class="modal-header">
+            <h5 class="modal-title">Добавить жильца</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-2">
+              <!-- ФИО -->
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="residentFullName">ФИО *</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="name" aria-pressed="true" title="Показывать ФИО">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="residentFullName" name="full_name" class="form-control" required autocomplete="name" />
+              </div>
+              <!-- Telegram -->
+              <div class="col-sm-6">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="residentTelegram">Телеграм</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="telegram" aria-pressed="true" title="Показывать Telegram">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="residentTelegram" name="telegram" class="form-control" autocomplete="off" />
+              </div>
+              <!-- Телефон -->
+              <div class="col-sm-6">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="residentPhone">Телефон</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="phone" aria-pressed="true" title="Показывать телефон">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="residentPhone" name="phone" class="form-control" autocomplete="tel" inputmode="tel" />
+              </div>
+              <!-- Email -->
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="residentEmail">Email</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="email" aria-pressed="true" title="Показывать email">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="email" id="residentEmail" name="email" class="form-control" autocomplete="email" />
+              </div>
 
-				<label for="residentPhone">Телефон</label>
-				<div class="field-with-visibility">
-					<input type="text" id="residentPhone" name="phone" autocomplete="tel" inputmode="tel" />
-					<button type="button" class="vis-toggle" data-target="residentPhone" aria-controls="residentPhone" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Телефона</span>
-					</button>
-				</div>
+              <!-- Квартиры -->
+              <div class="col-12" id="apartmentContainer">
+                <label class="form-label">Квартиры</label>
+                <div class="d-flex gap-2 align-items-center apartment-input mb-2">
+                  <input type="text" class="form-control" name="apartments[]" placeholder="Номер квартиры" inputmode="numeric" />
+                  <label class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" name="tenant[]" />
+                    <span class="form-check-label">Арендатор</span>
+                  </label>
+                </div>
+                <button type="button" id="addApartmentField" class="btn btn-outline-primary btn-sm">
+                  <i class="ti ti-plus me-1"></i>Добавить квартиру
+                </button>
+              </div>
 
-				<label for="residentEmail">Email</label>
-				<div class="field-with-visibility">
-					<input type="email" id="residentEmail" name="email" autocomplete="email" />
-					<button type="button" class="vis-toggle" data-target="residentEmail" aria-controls="residentEmail" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Email</span>
-					</button>
-				</div>
+              <!-- Парковка -->
+              <div class="col-12" id="parkingContainer">
+                <label class="form-label">Парковочные места</label>
+                <div class="d-flex gap-2 align-items-center parking-input mb-2">
+                  <input type="text" class="form-control" name="parking[]" placeholder="Номер парковки" inputmode="numeric" />
+                  <label class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" name="parkingTenant[]" />
+                    <span class="form-check-label">Арендатор</span>
+                  </label>
+                </div>
+                <button type="button" id="addParkingField" class="btn btn-outline-primary btn-sm">
+                  <i class="ti ti-plus me-1"></i>Добавить парковку
+                </button>
+              </div>
 
-				<div id="apartmentContainer">
-					<label>Квартиры</label>
-					<div class="apartment-input">
-						<input type="text" name="apartments[]" placeholder="Введите номер квартиры" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="tenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addApartmentField" class="button">Добавить квартиру</button>
-				</div>
+              <!-- Кладовые -->
+              <div class="col-12" id="storageContainer">
+                <label class="form-label">Кладовые</label>
+                <div class="d-flex gap-2 align-items-center storage-input mb-2">
+                  <input type="text" class="form-control" name="storages[]" placeholder="Номер кладовой" inputmode="numeric" />
+                  <label class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" name="storageTenant[]" />
+                    <span class="form-check-label">Арендатор</span>
+                  </label>
+                </div>
+                <button type="button" id="addStorageField" class="btn btn-outline-primary btn-sm">
+                  <i class="ti ti-plus me-1"></i>Добавить кладовую
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-link" data-bs-dismiss="modal">Отмена</button>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-				<div id="parkingContainer">
-					<label>Парковочные места</label>
-					<div class="parking-input">
-						<input type="text" name="parking[]" placeholder="Введите номер парковки" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="parkingTenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addParkingField" class="button">Добавить парковочное место</button>
-				</div>
+  <!-- Modal: Редактировать жильца (Tabler) -->
+  <div class="modal modal-blur fade" id="editResidentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <form id="editResidentForm">
+          <div class="modal-header">
+            <h5 class="modal-title">Редактировать жильца</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-2">
+              <!-- Аналогичные поля + иконки-глаза -->
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="editFullName">ФИО *</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="name" aria-pressed="true" title="Показывать ФИО">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="editFullName" name="full_name" class="form-control" required autocomplete="name" />
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="editTelegram">Телеграм</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="telegram" aria-pressed="true" title="Показывать Telegram">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="editTelegram" name="telegram" class="form-control" autocomplete="off" />
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="editPhone">Телефон</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="phone" aria-pressed="true" title="Показывать телефон">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="text" id="editPhone" name="phone" class="form-control" autocomplete="tel" inputmode="tel" />
+              </div>
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <label class="form-label m-0" for="editEmail">Email</label>
+                  <button type="button" class="btn btn-ghost-secondary btn-icon privacy-toggle" data-target="email" aria-pressed="true" title="Показывать email">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <input type="email" id="editEmail" name="email" class="form-control" autocomplete="email" />
+              </div>
 
-				<div id="storageContainer">
-					<label>Кладовые</label>
-					<div class="storage-input">
-						<input type="text" name="storages[]" placeholder="Введите номер кладовой" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="storageTenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addStorageField" class="button">Добавить кладовую</button>
-				</div>
+              <div class="col-12" id="editApartmentContainer"></div>
+              <div class="col-12" id="editParkingContainer"></div>
+              <div class="col-12" id="editStorageContainer"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-link" data-bs-dismiss="modal">Отмена</button>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-				<button type="submit" class="button">Сохранить</button>
-			</form>
-		</div>
-	</div>
-
-	<!-- Модалка: Добавить жильца -->
-	<div id="addResidentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addResidentTitle" aria-hidden="true">
-		<div class="modal-content">
-			<button type="button" class="close" aria-label="Закрыть">&times;</button>
-			<h2 id="addResidentTitle">Добавить жильца</h2>
-
-			<form id="addResidentForm">
-				<label for="residentFullName">ФИО *</label>
-				<input type="text" id="residentFullName" name="full_name" placeholder="ФИО" required autocomplete="name" />
-
-				<label for="residentTelegram">Телеграм</label>
-				<div class="field-with-visibility">
-					<input type="text" id="residentTelegram" name="telegram" autocomplete="off" />
-					<button type="button" class="vis-toggle" data-target="residentTelegram" aria-controls="residentTelegram" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Телеграм</span>
-					</button>
-				</div>
-
-				<label for="residentPhone">Телефон</label>
-				<div class="field-with-visibility">
-					<input type="text" id="residentPhone" name="phone" autocomplete="tel" inputmode="tel" />
-					<button type="button" class="vis-toggle" data-target="residentPhone" aria-controls="residentPhone" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Телефона</span>
-					</button>
-				</div>
-
-				<label for="residentEmail">Email</label>
-				<div class="field-with-visibility">
-					<input type="email" id="residentEmail" name="email" autocomplete="email" />
-					<button type="button" class="vis-toggle" data-target="residentEmail" aria-controls="residentEmail" aria-pressed="false" title="Показывать/скрывать в шахматке">
-						<i class="fa-regular fa-eye" aria-hidden="true"></i>
-						<span class="visually-hidden">Переключить видимость Email</span>
-					</button>
-				</div>
-
-				<div id="apartmentContainer">
-					<label>Квартиры</label>
-					<div class="apartment-input">
-						<input type="text" name="apartments[]" placeholder="Введите номер квартиры" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="tenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addApartmentField" class="button">Добавить квартиру</button>
-				</div>
-
-				<div id="parkingContainer">
-					<label>Парковочные места</label>
-					<div class="parking-input">
-						<input type="text" name="parking[]" placeholder="Введите номер парковки" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="parkingTenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addParkingField" class="button">Добавить парковочное место</button>
-				</div>
-
-				<div id="storageContainer">
-					<label>Кладовые</label>
-					<div class="storage-input">
-						<input type="text" name="storages[]" placeholder="Введите номер кладовой" inputmode="numeric" />
-						<label>
-							<input type="checkbox" name="storageTenant[]" /> Арендатор
-						</label>
-					</div>
-					<button type="button" id="addStorageField" class="button">Добавить кладовую</button>
-				</div>
-
-				<button type="submit" class="button">Сохранить</button>
-			</form>
-		</div>
-	</div>
-
-<script src="../scripts/config.js"></script>
-<script src="../scripts/ui.js"></script>
-<script src="../scripts/auth-guard.js"></script>
-<script src="../scripts/layout.js"></script>
-<script src="../scripts/houseVisualization.js" defer></script>
-<!-- Tabler JS -->
-<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
+  <!-- Скрипты проекта -->
+  <script src="../scripts/config.js"></script>
+  <script src="../scripts/ui.js"></script>
+  <script src="../scripts/auth-guard.js"></script>
+  <script src="../scripts/layout.js"></script>
+  <script src="../scripts/houseVisualization.js" defer></script>
+  <!-- Tabler JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
 </body>
 </html>

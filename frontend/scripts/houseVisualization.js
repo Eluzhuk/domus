@@ -1,926 +1,590 @@
-/** Маскирует буквы/цифры, но оставляет знаки препинания и пробелы */
-function maskValue(val) {
-if (!val) return '';
-return String(val).replace(/[0-9A-Za-zА-Яа-яЁё]/g, '*');
+/**
+ * Domus — Визуализация дома (шахматка, паркинг, кладовые).
+ * UI-улучшения: ровные этажи, нумерация слева/справа (липкие), горизонтальный скролл, оффканвас.
+ * Все клики по пустым ячейкам открывают Tabler-модалку "Добавить жильца".
+ */
+
+/** Утилиты */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const n0 = v => Number.isFinite(+v) ? +v : 0;
+
+/** Маска ПДн: буквы/цифры -> * (пробелы/пунктуация сохраняем) */
+function mask(v){ return String(v||'').replace(/[0-9A-Za-zА-Яа-яЁё]/g, '*'); }
+
+/** Bootstrap helpers */
+const BSM = () => window.bootstrap?.Modal || bootstrap.Modal;
+const BSO = () => window.bootstrap?.Offcanvas || bootstrap.Offcanvas;
+function showModalById(id){ const el = $(id); if(!el) return null; const m = new (BSM())(el); m.show(); return m; }
+function showOffcanvasById(id){ const el = $(id); if(!el) return null; const o = new (BSO())(el); o.show(); return o; }
+
+/** Иконки-глаза для приватности (кнопки в модалках) */
+function initPrivacyIconToggles(modalEl){
+  if(!modalEl) return;
+  $$('.privacy-toggle', modalEl).forEach(btn=>{
+    const update = on=>{
+      btn.setAttribute('aria-pressed', String(on));
+      btn.innerHTML = `<i class="ti ${on ? 'ti-eye' : 'ti-eye-off'}"></i>`;
+      btn.title = on ? 'Показывать в шахматке' : 'Скрывать в шахматке';
+    };
+    // начальное состояние
+    update(btn.getAttribute('aria-pressed') !== 'false');
+    btn.addEventListener('click',()=>{
+      const on = btn.getAttribute('aria-pressed') === 'true';
+      update(!on);
+    });
+  });
+}
+function isPrivacyOn(modalEl, key){
+  const btn = modalEl.querySelector(`.privacy-toggle[data-target="${key}"]`);
+  return btn ? (btn.getAttribute('aria-pressed') === 'true') : true;
 }
 
-/** Навешивает поведение на все .vis-toggle внутри modalEl */
-function initVisibilityToggles(modalEl) {
-modalEl.querySelectorAll('.vis-toggle').forEach(btn => {
-	btn.addEventListener('click', () => {
-		const pressed = btn.getAttribute('aria-pressed') === 'true';
-		btn.setAttribute('aria-pressed', String(!pressed));
-		const icon = btn.querySelector('i');
-		if (icon) {
-		icon.classList.toggle('fa-eye',  pressed);     // если было скрыто — показать глаз
-		icon.classList.toggle('fa-eye-slash', !pressed); // если было видно — перечеркнуть
-		}
-	});
-});
+/**
+ * Строит колонку этажей (числа от maxFloors до 1)
+ * @param {HTMLElement} root - контейнер (floorsLeft/floorsRight)
+ * @param {number} maxFloors
+ */
+function buildFloorsColumn(root, maxFloors){
+  root.innerHTML = '';
+  for(let f=maxFloors; f>=1; f--){
+    const d=document.createElement('div');
+    d.className='floor-index';
+    d.textContent=String(f);
+    root.appendChild(d);
+  }
 }
 
-/** Считывает флаги show_* из модалки (true = показывать) */
-function getPrivacyFromModal(modalEl) {
-const getShow = (id) => {
-	const btn = modalEl.querySelector(`.vis-toggle[data-target="${id}"]`);
-	// aria-pressed=true => скрыто => show=false
-	const hidden = btn ? (btn.getAttribute('aria-pressed') === 'true') : false;
-	return !hidden;
-};
-return {
-	show_full_name: getShow('residentFullName'),
-	show_phone:     getShow('residentPhone'),
-	show_email:     getShow('residentEmail'),
-	show_telegram:  getShow('residentTelegram'),
-};
+/**
+ * Рисует одну колонку подъезда как набор "рядов этажей".
+ * Каждый ряд содержит ровно apartments_per_floor ячеек.
+ * Пропущенные этажи — пустые ряды (для выравнивания).
+ * @param {object} entrance
+ * @param {number} maxFloors
+ * @param {boolean} nonResidentialFirst
+ * @returns {HTMLElement}
+ */
+function renderEntranceColumn(entrance, maxFloors, nonResidentialFirst){
+  const wrap = document.createElement('div');
+  wrap.className='entrance-col';
+
+  // заголовок подъезда
+  const head = document.createElement('div');
+  head.className = 'entrance-header';
+  head.textContent = `Подъезд №${entrance.entrance_number}`;
+  wrap.appendChild(head);
+
+  // группируем квартиры по этажам
+  const floorsMap = {};
+  (entrance.Apartments || []).forEach(ap => {
+    const f = n0(ap.floor_number);
+    (floorsMap[f] ||= []).push(ap);
+  });
+
+  // базово берём apartments_per_floor; если нет — считаем максимум фактических квартир на этаж
+  const colsFromData = n0(entrance.apartments_per_floor);
+  const colsFromFact = Object.values(floorsMap).reduce((m, arr) => Math.max(m, arr.length), 0);
+  const cols = Math.max(1, colsFromData || colsFromFact || 1);
+  // прокидываем в CSS
+  wrap.style.setProperty('--cols', String(cols));
+
+  for (let f = maxFloors; f >= 1; f--) {
+    const row = document.createElement('div');
+    row.className = 'floor-row';
+
+    if (f > n0(entrance.floors_count)) {
+      // этаж отсутствует — просто пустая строка правильной высоты
+      wrap.appendChild(row);
+      continue;
+    }
+
+    if (f === 1 && nonResidentialFirst) {
+      for (let i = 0; i < cols; i++) {
+        const c = document.createElement('div');
+        c.className = 'cell cell-nonres';
+        c.textContent = '—';
+        row.appendChild(c);
+      }
+      wrap.appendChild(row);
+      continue;
+    }
+
+    const list = (floorsMap[f] || []).sort((a, b) => n0(a.apartment_number) - n0(b.apartment_number));
+    list.forEach((ap) => {
+      const c = document.createElement('div');
+      c.className = 'cell apartment';
+      c.textContent = ap.apartment_number;
+
+      if (ap.isOccupied) {
+        c.classList.add('occupied');
+        c.addEventListener('click', () =>
+          openResidentDrawerFor('apartment', ap.apartment_number, ap.ResidentApartments || []),
+        );
+      } else {
+        c.addEventListener('click', () =>
+          openAddResidentModalPrefill('apartment', String(ap.apartment_number)),
+        );
+      }
+
+      row.appendChild(c);
+    });
+
+    wrap.appendChild(row);
+  }
+
+  // ✅ Нижняя подпись подъезда
+  const foot = document.createElement('div');
+  foot.className = 'entrance-footer';
+  foot.textContent = `Подъезд №${entrance.entrance_number}`;
+  wrap.appendChild(foot);
+
+  return wrap;
 }
 
-/** Применяет флаги к модалке (true = показывать) */
-function setPrivacyToModal(modalEl, privacy = {}) {
-const setBtn = (id, show) => {
-	const btn = modalEl.querySelector(`.vis-toggle[data-target="${id}"]`);
-	if (!btn) return;
-	const hidden = show === false; // если показывать=false, значит скрыто
-	btn.setAttribute('aria-pressed', String(hidden));
-	const icon = btn.querySelector('i');
-	if (icon) {
-		icon.classList.toggle('fa-eye', !hidden);
-		icon.classList.toggle('fa-eye-slash', hidden);
-	}
-};
-setBtn('residentFullName', privacy.show_full_name !== false);
-setBtn('residentPhone',    privacy.show_phone     !== false);
-setBtn('residentEmail',    privacy.show_email     !== false);
-setBtn('residentTelegram', privacy.show_telegram  !== false);
+/**
+ * Открывает оффканвас и наполняет данными жильцов (с маскированием по privacy).
+ * @param {'apartment'|'parking'|'storage'} type
+ * @param {string|number} number
+ * @param {Array} links - связи (ResidentApartments | ResidentParkings | ResidentStorages)
+ */
+function openResidentDrawerFor(type, number, links){
+  const title = {
+    apartment:'Квартира',
+    parking:'Место',
+    storage:'Кладовая',
+  }[type] || 'Помещение';
+
+  $('#residentDrawerTitle').textContent = `${title} ${number}`;
+  const body = $('#residentDrawerBody');
+  body.innerHTML = '';
+
+  if(!Array.isArray(links) || links.length===0){
+    body.innerHTML = '<div class="text-secondary">Нет данных о жильцах</div>';
+    showOffcanvasById('#residentDrawer');
+    return;
+  }
+
+  // Секции жильцов
+  links.forEach(link=>{
+    const res = link?.Resident || {};
+    const p = res?.privacy || {};
+    const showName     = p.show_full_name !== false;
+    const showPhone    = p.show_phone     !== false;
+    const showEmail    = p.show_email     !== false;
+    const showTelegram = p.show_telegram  !== false;
+
+    const card=document.createElement('div');
+    card.className='card card-sm mb-2';
+    card.innerHTML = `
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="fw-bold">${showName ? (res.full_name||'—') : mask(res.full_name)}</div>
+            ${res.phone ? `<div class="text-secondary small">Тел: ${showPhone ? res.phone : mask(res.phone)}</div>` : ''}
+            ${res.email ? `<div class="text-secondary small">Email: ${showEmail ? res.email : mask(res.email)}</div>` : ''}
+            ${res.telegram ? `<div class="text-secondary small">Telegram: ${showTelegram ? res.telegram : mask(res.telegram)}</div>` : ''}
+          </div>
+          <div class="btn-list">
+            <button class="btn btn-ghost-secondary btn-icon edit-resident" title="Редактировать" data-id="${res.id || ''}">
+              <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn btn-ghost-danger btn-icon delete-resident"
+                    title="Отвязать"
+                    data-id="${res.id || ''}"
+                    data-relation="${'spot_number' in link ? 'parking' : ('unit_number' in link ? 'storage' : 'apartment')}"
+                    data-relation-id="${link.id}">
+              <i class="ti ti-unlink"></i>
+            </button>
+          </div>
+        </div>
+      </div>`;
+    body.appendChild(card);
+  });
+
+  showOffcanvasById('#residentDrawer');
 }
 
-document.addEventListener('DOMContentLoaded', async function () {
-	const houseId = new URLSearchParams(window.location.search).get('id');
-	const houseNameElement = document.getElementById('houseName');
-	const chessboard = document.getElementById('chessboard');
-	const parkingSection = document.getElementById('parking');
-	const storagesSection = document.getElementById('storages');
-	initVisibilityToggles(document.getElementById('addResidentModal'));
-	initVisibilityToggles(document.getElementById('editResidentModal'));
+/** Открыть модалку "Добавить жильца" и подставить номер */
+function openAddResidentModalPrefill(kind, number){
+  const form = $('#addResidentForm');
+  form.reset();
+  form.dataset.houseId = new URLSearchParams(location.search).get('id') || '';
 
-	try {
-		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/structure`);
-		const house = await response.json();
+  // очистим возможные динамические поля
+  $$('#apartmentContainer .dynamic-field, #parkingContainer .dynamic-field, #storageContainer .dynamic-field').forEach(n=>n.remove());
 
-		houseNameElement.textContent = house.name;
-		
-		// Сортировка подъездов по возрастанию их номера
-		house.Entrances.sort((a, b) => a.entrance_number - b.entrance_number);
+  // подставим номер
+  if(kind==='apartment') form.querySelector('input[name="apartments[]"]').value = number;
+  if(kind==='parking')   form.querySelector('input[name="parking[]"]').value   = number;
+  if(kind==='storage')   form.querySelector('input[name="storages[]"]').value  = number;
 
-		// Вычисляем максимальное количество этажей среди всех подъездов
-		const maxFloors = Math.max(...house.Entrances.map((entrance) => entrance.floors_count));
-
-		// Создаем контейнер для заголовка и этажей
-		const floorColumnContainer = document.createElement('div');
-		floorColumnContainer.classList.add('floor-column-container');
-
-		// Добавляем заголовок "Этаж"
-		const floorColumnHeader = document.createElement('div');
-		floorColumnHeader.classList.add('floor-column-header'); // Новый класс для заголовка
-		floorColumnHeader.textContent = 'Этаж';
-		floorColumnContainer.appendChild(floorColumnHeader);
-
-		// Генерация колонки этажей
-		const floorNumbersDiv = document.createElement('div');
-		floorNumbersDiv.classList.add('floor-numbers'); // Класс для оформления
-		for (let floor = maxFloors; floor >= 1; floor--) {
-			const floorNumberDiv = document.createElement('div');
-			floorNumberDiv.classList.add('floor-number'); // Класс для каждого этажа
-			floorNumberDiv.textContent = floor; // Номер этажа
-			floorNumbersDiv.appendChild(floorNumberDiv);
-		}
-
-		// Добавляем колонку этажей в контейнер
-		floorColumnContainer.appendChild(floorNumbersDiv);
-
-		// Вставляем контейнер для этажей перед всеми подъездами
-		chessboard.insertBefore(floorColumnContainer, chessboard.firstChild);
-
-		// Генерация шахматки
-		house.Entrances.forEach((entrance) => {
-			const entranceWrapper = document.createElement('div');
-			entranceWrapper.classList.add('entrance-wrapper');
-
-			const entranceDiv = document.createElement('div');
-			entranceDiv.classList.add('entrance');
-
-			const totalFloors = entrance.floors_count;
-
-			const floors = {};
-			entrance.Apartments.forEach((apartment) => {
-				if (!floors[apartment.floor_number]) {
-					floors[apartment.floor_number] = [];
-				}
-				floors[apartment.floor_number].push(apartment);
-			});
-
-			// Генерация этажей для подъезда
-			for (let floor = maxFloors; floor >= 1; floor--) {
-				const floorDiv = document.createElement('div');
-				floorDiv.classList.add('floor');
-
-				if (floor > totalFloors) {
-					// Пропускаем этажи, которых нет в подъезде
-					continue;
-				}
-
-				if (floor === 1 && house.non_residential_first_floor) {
-					for (let i = 1; i <= entrance.apartments_per_floor; i++) {
-							const apartmentDiv = document.createElement('div');
-							apartmentDiv.classList.add('apartment', 'non-residential');
-							apartmentDiv.textContent = `—`;
-							floorDiv.appendChild(apartmentDiv);
-					}
-				} else {
-					(floors[floor] || [])
-							.sort((a, b) => a.apartment_number - b.apartment_number)
-							.forEach((apartment) => {
-								const apartmentDiv = document.createElement('div');
-								apartmentDiv.classList.add('apartment');
-								apartmentDiv.textContent = apartment.apartment_number;
-
-								if (apartment.isOccupied) {
-									apartmentDiv.classList.add('occupied');
-									apartmentDiv.addEventListener('click', (e) => toggleTooltip(e, apartment.ResidentApartments));
-								}
-
-								floorDiv.appendChild(apartmentDiv);
-							});
-				}
-
-				entranceDiv.appendChild(floorDiv);
-			}
-
-			const entranceLabel = document.createElement('div');
-			entranceLabel.classList.add('entrance-label');
-			entranceLabel.textContent = `Подъезд № ${entrance.entrance_number}`;
-
-			entranceWrapper.appendChild(entranceDiv);
-			entranceWrapper.appendChild(entranceLabel);
-
-			chessboard.appendChild(entranceWrapper);
-		});
-
-		// Генерация паркинга
-		if (house.Parkings.length > 0) {
-		// 1) Сортируем уровни, чтобы сверху был -1, затем -2, -3 ...
-		const parkingsSorted = [...house.Parkings].sort(
-			(a, b) => Number(b.level) - Number(a.level)
-		);
-
-		// 2) Сквозная нумерация мест по всем уровням
-		let spotCounter = 1;
-
-		parkingsSorted.forEach((parkingLevel) => {
-			const parkingLevelDiv = document.createElement('div');
-			parkingLevelDiv.classList.add('parking-level');
-
-			const parkingTitle = document.createElement('h3');
-			parkingTitle.textContent = `Уровень ${parkingLevel.level}`;
-			parkingLevelDiv.appendChild(parkingTitle);
-
-			const parkingGrid = document.createElement('div');
-			parkingGrid.classList.add('parking-grid');
-
-			for (let i = 1; i <= parkingLevel.spots_count; i++) {
-				const globalSpotNumber = spotCounter; // глобальный номер по дому
-				const spotDiv = document.createElement('div');
-				spotDiv.classList.add('parking-spot');
-				spotDiv.textContent = globalSpotNumber;
-
-				// Проверка занятости: сравниваем с глобальным номером
-				if (parkingLevel.ResidentParkings?.some((rp) => Number(rp.spot_number) === globalSpotNumber)) {
-				spotDiv.classList.add('occupied');
-				spotDiv.addEventListener('click', (e) => {
-					const residentsHere = parkingLevel.ResidentParkings.filter(
-						(rp) => Number(rp.spot_number) === globalSpotNumber
-					);
-					toggleTooltip(e, residentsHere);
-				});
-				} else {
-				// Свободное место — кликом открываем модалку добавления жильца с уже подставленным номером
-				spotDiv.addEventListener('click', function () {
-					openAddResidentModal('parking', String(globalSpotNumber));
-				});
-				}
-
-				parkingGrid.appendChild(spotDiv);
-				spotCounter++; // двигаем сквозной счётчик
-			}
-
-			parkingLevelDiv.appendChild(parkingGrid);
-			parkingSection.appendChild(parkingLevelDiv);
-		});
-		} else {
-		// Если паркинга нет — убираем заголовок и секцию
-		parkingSection.previousElementSibling?.remove();
-		parkingSection.remove();
-		}
-
-		// Генерация кладовых
-		if (house.StorageUnits.length > 0) {
-		// 1) Сортируем уровни, чтобы сверху был -1, затем -2, -3 ...
-		const storagesSorted = [...house.StorageUnits].sort(
-			(a, b) => Number(b.level) - Number(a.level)
-		);
-
-		// 2) Сквозная нумерация кладовых по всем уровням
-		let storageCounter = 1;
-
-		storagesSorted.forEach((storageLevel) => {
-			const storageLevelDiv = document.createElement('div');
-			storageLevelDiv.classList.add('storage-level');
-
-			const storageTitle = document.createElement('h3');
-			storageTitle.textContent = `Уровень ${storageLevel.level}`;
-			storageLevelDiv.appendChild(storageTitle);
-
-			const storageGrid = document.createElement('div');
-			storageGrid.classList.add('storage-grid');
-
-			for (let i = 1; i <= storageLevel.units_count; i++) {
-				const globalUnitNumber = storageCounter; // глобальный номер по дому
-				const unitDiv = document.createElement('div');
-				unitDiv.classList.add('storage-unit');
-				unitDiv.textContent = globalUnitNumber;
-
-				// Проверка занятости: сравниваем с глобальным номером
-				if (storageLevel.ResidentStorages?.some((rs) => Number(rs.unit_number) === globalUnitNumber)) {
-				unitDiv.classList.add('occupied');
-				unitDiv.addEventListener('click', (e) => {
-					const residentsHere = storageLevel.ResidentStorages.filter(
-						(rs) => Number(rs.unit_number) === globalUnitNumber
-					);
-					toggleTooltip(e, residentsHere);
-				});
-				} else {
-				// Свободная кладовая — открываем модалку добавления жильца с глобальным номером
-				unitDiv.addEventListener('click', function () {
-					openAddResidentModal('storage', String(globalUnitNumber));
-				});
-				}
-
-				storageGrid.appendChild(unitDiv);
-				storageCounter++; // двигаем сквозной счётчик
-			}
-
-			storageLevelDiv.appendChild(storageGrid);
-			storagesSection.appendChild(storageLevelDiv);
-		});
-		} else {
-		// Если кладовых нет — убираем заголовок и секцию
-		storagesSection.previousElementSibling?.remove();
-		storagesSection.remove();
-		}
-
-		document.querySelectorAll('.apartment:not(.occupied)').forEach(apartment => {
-			apartment.addEventListener('click', function () {
-				openAddResidentModal('apartment', this.textContent.trim());
-			});
-	});
-	
-	document.querySelectorAll('.parking-spot:not(.occupied)').forEach(spot => {
-			spot.addEventListener('click', function () {
-				openAddResidentModal('parking', this.textContent.trim());
-			});
-	});
-	
-	document.querySelectorAll('.storage-unit:not(.occupied)').forEach(unit => {
-			unit.addEventListener('click', function () {
-				openAddResidentModal('storage', this.textContent.trim());
-			});
-	});
-	
-	// Функция открытия модального окна с предварительным заполнением данных
-	function openAddResidentModal(type, number) {
-			const modal = document.getElementById('addResidentModal');
-			modal.style.display = 'flex';
-	
-			const form = document.getElementById('addResidentForm');
-			form.reset();
-	
-			const houseId = new URLSearchParams(window.location.search).get('id');
-			form.dataset.houseId = houseId;
-	
-			if (type === 'apartment') {
-				form.querySelector('input[name="apartments[]"]').value = number;
-			} else if (type === 'parking') {
-				form.querySelector('input[name="parking[]"]').value = number;
-			} else if (type === 'storage') {
-				form.querySelector('input[name="storages[]"]').value = number;
-			}
-	}
-	} catch (error) {
-		console.error('Ошибка загрузки данных дома:', error);
-		chessboard.textContent = 'Ошибка загрузки данных';
-	}
-});
-
-// Переменная для отслеживания состояния окна
-let isTooltipOpen = false;
-
-// Закрытие всплывающего окна при клике вне него
-document.addEventListener('click', (event) => {
-	const tooltip = document.getElementById('tooltip');
-	const isTargetInsideTooltip = tooltip.contains(event.target);
-	const isTargetInteractive = event.target.classList.contains('apartment') ||
-										event.target.classList.contains('parking-spot') ||
-										event.target.classList.contains('storage-unit');
-
-	if (isTooltipOpen && !isTargetInsideTooltip && !isTargetInteractive) {
-		tooltip.classList.remove('visible');
-		tooltip.classList.add('hidden');
-		isTooltipOpen = false;
-	}
-});
-
-// Функция для отображения/скрытия всплывающего окна
-function toggleTooltip(event, residents) {
-const tooltip = document.getElementById('tooltip');
-
-// Локальная маска: буквы/цифры -> '*', пунктуация/пробелы остаются
-const mask = (v) => String(v || '').replace(/[0-9A-Za-zА-Яа-яЁё]/g, '*');
-
-// Рендер одного жильца с учётом privacy
-function renderResidentBlock(link, privacy) {
-	if (!link || !link.Resident) return '<p>Данные о жильце отсутствуют</p>';
-
-	const residentId = link.Resident.id ?? null;
-	const relationType =
-		('spot_number' in link) ? 'parking' :
-		('unit_number' in link) ? 'storage' : 'apartment';
-	const relationId = link.id;
-
-	const showFullName = privacy?.show_full_name !== false;
-	const showPhone    = privacy?.show_phone     !== false;
-	const showEmail    = privacy?.show_email     !== false;
-	const showTelegram = privacy?.show_telegram  !== false;
-
-	const fullName = link.Resident.full_name || '';
-	const phone    = link.Resident.phone     || '';
-	const email    = link.Resident.email     || '';
-	const telegram = link.Resident.telegram  || '';
-
-	const fullNameOut = showFullName ? fullName : mask(fullName);
-	const phoneOut    = showPhone    ? phone    : mask(phone);
-	const emailOut    = showEmail    ? email    : mask(email);
-	const telegramOut = showTelegram ? telegram : mask(telegram);
-
-	return `
-		<div class="resident-block" data-resident-id="${residentId}">
-		<p><strong>Имя:</strong> ${fullNameOut || 'Не указано'}</p>
-
-		<div class="resident-actions">
-			<button class="edit-resident" data-id="${residentId}" title="Редактировать">✏️</button>
-			<button class="delete-resident"
-						data-id="${residentId}"
-						data-relation="${relationType}"
-						data-relation-id="${relationId}"
-						title="Отвязать жильца от этого объекта">Отвязать</button>
-		</div>
-
-		${phone    ? `<p><strong>Телефон:</strong> ${phoneOut}</p>`     : ''}
-		${email    ? `<p><strong>Email:</strong> ${emailOut}</p>`       : ''}
-		${telegram ? `<p><strong>Telegram:</strong> ${telegramOut}</p>` : ''}
-		</div>
-	`;
+  initPrivacyIconToggles($('#addResidentModal'));
+  showModalById('#addResidentModal');
 }
 
-// Если уже открыто — закрываем
-if (isTooltipOpen) {
-	tooltip.classList.remove('visible');
-	tooltip.classList.add('hidden');
-	isTooltipOpen = false;
-	return;
+/** Построение разделов Паркинг/Кладовые с глобальной нумерацией и кликами */
+function buildParking(house){
+  const root = $('#parking'); root.innerHTML = '';
+  const card = $('#parkingCard');
+
+  const levels = [...(house.Parkings||[])].sort((a,b)=>n0(b.level)-n0(a.level));
+  if(!levels.length){ card?.remove(); return; }
+
+  let spotCounter=1;
+  levels.forEach(l=>{
+    const box=document.createElement('div');
+    box.className='parking-level';
+    box.innerHTML=`<div class="parking-title">Уровень ${l.level}</div>`;
+    const grid=document.createElement('div');
+    grid.className='parking-grid';
+
+    for(let i=1;i<=n0(l.spots_count);i++){
+      const gnum = spotCounter;
+      const cell=document.createElement('div');
+      cell.className='cell parking-spot';
+      cell.textContent = gnum;
+
+      const occupied = (l.ResidentParkings||[]).some(rp=>n0(rp.spot_number)===gnum);
+      if(occupied){
+        cell.classList.add('occupied');
+        const residentsHere = (l.ResidentParkings||[]).filter(rp=>n0(rp.spot_number)===gnum);
+        cell.addEventListener('click', ()=> openResidentDrawerFor('parking', gnum, residentsHere));
+      }else{
+        cell.addEventListener('click', ()=> openAddResidentModalPrefill('parking', String(gnum)));
+      }
+      grid.appendChild(cell);
+      spotCounter++;
+    }
+    box.appendChild(grid);
+    root.appendChild(box);
+  });
 }
 
-tooltip.classList.remove('hidden');
+function buildStorages(house){
+  const root = $('#storages'); root.innerHTML = '';
+  const card = $('#storagesCard');
 
-if (!Array.isArray(residents) || residents.length === 0) {
-	tooltip.innerHTML = '<p>Нет данных о жильцах</p>';
-} else {
-	// 1) Сначала рендерим по тем данным, что уже пришли из /structure
-	tooltip.innerHTML = residents.map((link) => {
-		const p = (link?.Resident && link.Resident.privacy) || null;
-		return renderResidentBlock(link, p);
-	}).join('');
+  const levels = [...(house.StorageUnits||[])].sort((a,b)=>n0(b.level)-n0(a.level));
+  if(!levels.length){ card?.remove(); return; }
 
-	// 2) Для тех, у кого privacy нет или он пустой — дотягиваем и точечно перерисовываем
-	residents.forEach(async (link) => {
-		const residentId = link?.Resident?.id;
-		if (!residentId) return;
+  let unitCounter=1;
+  levels.forEach(l=>{
+    const box=document.createElement('div');
+    box.className='storage-level';
+    box.innerHTML=`<div class="storage-title">Уровень ${l.level}</div>`;
+    const grid=document.createElement('div');
+    grid.className='storage-grid';
 
-		const p = link?.Resident?.privacy;
-		const hasPrivacy = p && Object.keys(p).length > 0;
+    for(let i=1;i<=n0(l.units_count);i++){
+      const gnum = unitCounter;
+      const cell=document.createElement('div');
+      cell.className='cell storage-unit';
+      cell.textContent = gnum;
 
-		if (!hasPrivacy) {
-		try {
-			const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
-			if (!resp.ok) return;
-			const data = await resp.json();
-			const fresh = data?.privacy;
-			if (fresh) {
-				const block = tooltip.querySelector(`.resident-block[data-resident-id="${residentId}"]`);
-				if (block) block.outerHTML = renderResidentBlock(link, fresh);
-			}
-		} catch (e) {
-			// молча игнорируем сетевые ошибки — просто оставим как есть
-			console.warn('Не удалось дотянуть privacy для жильца', residentId, e);
-		}
-		}
-	});
+      const occupied = (l.ResidentStorages||[]).some(rs=>n0(rs.unit_number)===gnum);
+      if(occupied){
+        cell.classList.add('occupied');
+        const residentsHere = (l.ResidentStorages||[]).filter(rs=>n0(rs.unit_number)===gnum);
+        cell.addEventListener('click', ()=> openResidentDrawerFor('storage', gnum, residentsHere));
+      }else{
+        cell.addEventListener('click', ()=> openAddResidentModalPrefill('storage', String(gnum)));
+      }
+      grid.appendChild(cell);
+      unitCounter++;
+    }
+    box.appendChild(grid);
+    root.appendChild(box);
+  });
 }
 
-// Позиция и показ
-tooltip.style.left = `${event.pageX + 10}px`;
-tooltip.style.top  = `${event.pageY + 10}px`;
-tooltip.classList.add('visible');
-isTooltipOpen = true;
+/** Сбор приватности из модалки */
+function getPrivacyFromModal(modalEl){
+  return {
+    show_full_name: isPrivacyOn(modalEl,'name'),
+    show_phone:     isPrivacyOn(modalEl,'phone'),
+    show_email:     isPrivacyOn(modalEl,'email'),
+    show_telegram:  isPrivacyOn(modalEl,'telegram'),
+  };
 }
 
-// Вызов toggleTooltip для квартир, парковки и кладовых
-document.querySelectorAll('.occupied').forEach(element => {
-	element.addEventListener('click', (event) => {
-		const residents = element.dataset.residents ? JSON.parse(element.dataset.residents) : [];
-		toggleTooltip(event, residents);
-	});
-});
-
-//обработчик на кнопку "Редактировать жильца"
-document.addEventListener('click', (e) => {
-if (e.target.classList.contains('edit-resident')) {
-	e.stopPropagation();
-	const residentId = e.target.dataset.id;
-	openEditResidentModal(residentId); // ✅ setPrivacyToModal вызовем внутри самой функции после загрузки данных
-}
-});
-
-document.addEventListener('click', async (e) => {
-if (!e.target.classList.contains('delete-resident')) return;
-
-const residentId  = e.target.dataset.id;           // id жильца
-const relation    = e.target.dataset.relation;     // 'apartment' | 'parking' | 'storage'
-const relationId  = e.target.dataset.relationId;   // id строки связи (Resident* id)
-
-if (!residentId || !relation || !relationId) {
-	alert('Не удалось определить связь для отвязки (нет необходимых параметров).');
-	console.error('delete-resident click -> missing data:', { residentId, relation, relationId });
-	return;
+/** Добавление динамических полей в модалке "Добавить жильца" */
+function hookAddButtons(){
+  $('#addResidentModal')?.addEventListener('click', (ev)=>{
+    const t = ev.target;
+    const add = (containerId, inputName, checkboxName, placeholder)=>{
+      const c = $(`#addResidentModal #${containerId}`);
+      const row = document.createElement('div');
+      row.className='dynamic-field d-flex gap-2 align-items-center mb-2';
+      row.innerHTML = `
+        <input type="text" class="form-control" name="${inputName}[]" placeholder="${placeholder}">
+        <label class="form-check m-0">
+          <input class="form-check-input" type="checkbox" name="${checkboxName}[]">
+          <span class="form-check-label">Арендатор</span>
+        </label>
+        <button type="button" class="btn btn-link text-danger remove-field p-0"><i class="ti ti-x"></i></button>`;
+      // вставляем перед кнопкой "Добавить"
+      const btn = c.querySelector('button[id^="add"]');
+      c.insertBefore(row, btn || null);
+    };
+    if(t.id==='addApartmentField') add('apartmentContainer','apartments','tenant','Номер квартиры');
+    if(t.id==='addParkingField')   add('parkingContainer','parking','parkingTenant','Номер парковки');
+    if(t.id==='addStorageField')   add('storageContainer','storages','storageTenant','Номер кладовой');
+    if(t.classList.contains('remove-field')) t.closest('.dynamic-field')?.remove();
+  });
 }
 
-if (!confirm('Отвязать жильца от этого объекта?')) return;
+/** Сабмит "Добавить жильца" */
+function hookAddResidentSubmit(){
+  $('#addResidentForm')?.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const form = this;
+    const houseId = form.dataset.houseId || new URLSearchParams(location.search).get('id');
 
-try {
-	const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}/link`, {
-		method: 'DELETE',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ relation, relation_id: Number(relationId) })
-	});
+    const data = {
+      full_name: $('#residentFullName').value,
+      telegram: $('#residentTelegram').value || null,
+      phone:    $('#residentPhone').value || null,
+      email:    $('#residentEmail').value || null,
+      apartments: [],
+      parking: [],
+      storages: [],
+      privacy: getPrivacyFromModal($('#addResidentModal'))
+    };
 
-	if (response.ok) {
-		alert('Жилец отвязан от объекта.');
-		location.reload();
-	} else {
-		const error = await response.json().catch(() => ({}));
-		alert(`Ошибка: ${error.message || 'Неизвестная ошибка'}`);
-	}
-} catch (err) {
-	console.error('Ошибка отвязки жильца:', err);
-	alert('Ошибка подключения к серверу.');
-}
-});
+    $$('input[name="apartments[]"]').forEach((inp, idx)=>{
+      const v = (inp.value||'').trim();
+      if(!v || isNaN(v)) return;
+      const chk = $$('input[name="tenant[]"]')[idx];
+      data.apartments.push({ number: parseInt(v,10), tenant: !!(chk && chk.checked) });
+    });
+    $$('input[name="parking[]"]').forEach((inp, idx)=>{
+      const v = (inp.value||'').trim();
+      if(!v || isNaN(v)) return;
+      const chk = $$('input[name="parkingTenant[]"]')[idx];
+      data.parking.push({ number: parseInt(v,10), tenant: !!(chk && chk.checked) });
+    });
+    $$('input[name="storages[]"]').forEach((inp, idx)=>{
+      const v = (inp.value||'').trim();
+      if(!v || isNaN(v)) return;
+      const chk = $$('input[name="storageTenant[]"]')[idx];
+      data.storages.push({ number: parseInt(v,10), tenant: !!(chk && chk.checked) });
+    });
 
-const openEditResidentModal = async (residentId) => {
-	try {
-		const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
-		if (!response.ok) {
-			throw new Error('Ошибка загрузки данных жильца.');
-		}
-
-		const residentData = await response.json();
-		// Проверка наличия house_id
-		if (!residentData.house_id) {
-			console.error('house_id отсутствует в данных жильца:', residentData);
-			alert('Ошибка: Идентификатор дома отсутствует у жильца.');
-			return;
-	}
-		const form = document.getElementById('editResidentForm');
-		if (!form) {
-			console.error('Форма для редактирования жильца не найдена.');
-			return;
-		}
-
-		// Заполняем форму данными жильца
-		form.dataset.residentId = residentId;
-		form.dataset.houseId = residentData.house_id;
-		document.getElementById('residentFullName').value = residentData.full_name || '';
-		document.getElementById('residentTelegram').value = residentData.telegram || '';
-		document.getElementById('residentPhone').value = residentData.phone || '';
-		document.getElementById('residentEmail').value = residentData.email || '';
-
-		setPrivacyToModal(document.getElementById('editResidentModal'), residentData.privacy || {});
-
-		// Берём контейнеры ИМЕННО из модалки редактирования
-		const editResidentModalEl = document.getElementById('editResidentModal');
-		const apartmentContainer = editResidentModalEl.querySelector('#apartmentContainer');
-		const parkingContainer   = editResidentModalEl.querySelector('#parkingContainer');
-		const storageContainer   = editResidentModalEl.querySelector('#storageContainer');
-
-
-		const resetContainer = (container, labelText) => {
-		// Страховка: корректный элемент?
-		if (!container || !(container instanceof HTMLElement)) {
-			console.error('❌ Некорректный контейнер для resetContainer:', container);
-			return;
-		}
-
-		// Полная очистка
-		container.innerHTML = '';
-
-		// Лейбл сверху
-		const label = document.createElement('label');
-		label.textContent = labelText;
-		container.appendChild(label);
-
-		// Кнопка "Добавить" в зависимости от контейнера
-		if (container.id === 'apartmentContainer') {
-			const addButton = document.createElement('button');
-			addButton.type = 'button';
-			addButton.id = 'addApartmentField';
-			addButton.textContent = 'Добавить квартиру';
-			container.appendChild(addButton);
-
-			addButton.onclick = function () {
-				const newField = document.createElement('div');
-				newField.classList.add('apartment-input');
-				newField.innerHTML = `
-				<input type="text" name="apartments[]" placeholder="Введите номер квартиры">
-				<label><input type="checkbox" name="tenant[]"> Арендатор</label>
-				<button type="button" class="remove-field">Удалить</button>
-				`;
-				container.appendChild(newField);
-			};
-		}
-
-		if (container.id === 'parkingContainer') {
-			const addButton = document.createElement('button');
-			addButton.type = 'button';
-			addButton.id = 'addParkingField';
-			addButton.textContent = 'Добавить парковочное место';
-			container.appendChild(addButton);
-
-			addButton.onclick = function () {
-				const newField = document.createElement('div');
-				newField.classList.add('parking-input');
-				newField.innerHTML = `
-				<input type="text" name="parking[]" placeholder="Введите номер парковки">
-				<label><input type="checkbox" name="parkingTenant[]"> Арендатор</label>
-				<button type="button" class="remove-field">Удалить</button>
-				`;
-				container.appendChild(newField);
-			};
-		}
-
-		if (container.id === 'storageContainer') {
-			const addButton = document.createElement('button');
-			addButton.type = 'button';
-			addButton.id = 'addStorageField';
-			addButton.textContent = 'Добавить кладовую';
-			container.appendChild(addButton);
-
-			addButton.onclick = function () {
-				const newField = document.createElement('div');
-				newField.classList.add('storage-input');
-				newField.innerHTML = `
-				<input type="text" name="storages[]" placeholder="Введите номер кладовой">
-				<label><input type="checkbox" name="storageTenant[]"> Арендатор</label>
-				<button type="button" class="remove-field">Удалить</button>
-				`;
-				container.appendChild(newField);
-			};
-		}
-		};
-
-		// Сбрасываем контейнеры с сохранением лейблов
-		resetContainer(apartmentContainer, 'Квартиры');
-		resetContainer(parkingContainer, 'Парковочные места');
-		resetContainer(storageContainer, 'Кладовые');
-
-		// Добавляем квартиры
-		residentData.apartments.forEach((apartment) => {
-			const newField = document.createElement('div');
-			newField.classList.add('apartment-input');
-			newField.innerHTML = `
-					<input type="text" name="apartments[]" value="${apartment.number}" placeholder="Введите номер квартиры">
-					<label>
-						<input type="checkbox" name="tenant[]" ${apartment.tenant ? 'checked' : ''}> Арендатор
-					</label>
-					<button type="button" class="remove-field">Удалить</button>
-			`;
-			apartmentContainer.appendChild(newField);
-		});
-
-		// Добавляем парковки
-		residentData.parking.forEach((spot) => {
-			const newField = document.createElement('div');
-			newField.classList.add('parking-input');
-			newField.innerHTML = `
-					<input type="text" name="parking[]" value="${spot.number}" placeholder="Введите номер парковки">
-					<label>
-						<input type="checkbox" name="parkingTenant[]" ${spot.tenant ? 'checked' : ''}> Арендатор
-					</label>
-					<button type="button" class="remove-field">Удалить</button>
-			`;
-			parkingContainer.appendChild(newField);
-		});
-
-		// Добавляем кладовые
-		residentData.storages.forEach((unit) => {
-			const newField = document.createElement('div');
-			newField.classList.add('storage-input');
-			newField.innerHTML = `
-					<input type="text" name="storages[]" value="${unit.number}" placeholder="Введите номер кладовой">
-					<label>
-						<input type="checkbox" name="storageTenant[]" ${unit.tenant ? 'checked' : ''}> Арендатор
-					</label>
-					<button type="button" class="remove-field">Удалить</button>
-			`;
-			storageContainer.appendChild(newField);
-		});
-
-		// Показ модального окна
-		document.getElementById('editResidentModal').style.display = 'flex';
-		document.querySelector('#editResidentModal h2').textContent = 'Редактировать жильца';
-	} catch (error) {
-		console.error(error);
-		alert('Ошибка загрузки данных жильца.');
-	}
-};
-
-document.addEventListener('click', function (e) {
-	if (e.target && e.target.classList.contains('remove-field')) {
-		e.target.parentElement.remove(); // Удаляем родительский div
-	}
-});
-
-// Обработка сохранения изменений жильца
-document.getElementById('editResidentForm').addEventListener('submit', async function (e) {
-	e.preventDefault(); // Предотвращает стандартное поведение формы
-
-	const form = e.target;
-	const residentId = form.dataset.residentId; // Получаем ID жильца
-	const houseId = form.dataset.houseId; // Получаем ID дома (добавлено!)
-
-	if (!houseId) {
-		alert('Идентификатор дома отсутствует.');
-		return;
-	}
-
-	const formData = new FormData(form); // Собираем данные формы
-	const data = {
-		full_name: formData.get('full_name'),
-		telegram: formData.get('telegram') || null,
-		phone: formData.get('phone') || null,
-		email: formData.get('email') || null,
-		house_id: houseId, // Добавляем house_id (добавлено!)
-		apartments: [],
-		parking: [],
-		storages: [],
-		privacy: getPrivacyFromModal(document.getElementById('editResidentModal'))
-	};
-
-	// Собираем квартиры
-	form.querySelectorAll('input[name="apartments[]"]').forEach((input, index) => {
-		const tenantCheckbox = form.querySelectorAll('input[name="tenant[]"]')[index];
-		data.apartments.push({
-			number: input.value,
-			tenant: tenantCheckbox.checked,
-		});
-	});
-
-	// Собираем парковки
-	form.querySelectorAll('input[name="parking[]"]').forEach((input, index) => {
-		const tenantCheckbox = form.querySelectorAll('input[name="parkingTenant[]"]')[index];
-		data.parking.push({
-			number: input.value,
-			tenant: tenantCheckbox.checked,
-		});
-	});
-
-	// Собираем кладовые
-	form.querySelectorAll('input[name="storages[]"]').forEach((input, index) => {
-		const tenantCheckbox = form.querySelectorAll('input[name="storageTenant[]"]')[index];
-		data.storages.push({
-			number: input.value,
-			tenant: tenantCheckbox.checked,
-		});
-	});
-
-	console.log('Данные перед отправкой:', JSON.stringify(data, null, 2)); // Лог перед отправкой
-
-	try {
-		const response = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`, {
-			method: 'PUT',
-			headers: {
-					'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(data),
-		});
-
-		if (response.ok) {
-			alert('Жилец успешно обновлён.');
-			form.reset();
-			document.getElementById('editResidentModal').style.display = 'none';
-			location.reload(); // Перезагружаем страницу для обновления данных
-		} else {
-			const error = await response.json();
-			alert(`Ошибка: ${error.message}`);
-		}
-	} catch (error) {
-		console.error('Ошибка сохранения изменений:', error);
-		alert('Ошибка подключения к серверу.');
-	}
-});
-
-// Закрытие модального окна
-document.querySelector('#editResidentModal .close').addEventListener('click', () => {
-	document.getElementById('editResidentModal').style.display = 'none';
-});
-
-// Функция добавления нового поля (апартаменты, парковка, кладовая) НАД кнопкой
-function addField(containerId, inputName, checkboxName, placeholder) {
-	const container = document.querySelector(`#addResidentModal #${containerId}`);
-	if (!container) {
-		console.error(`❌ Ошибка: Контейнер ${containerId} не найден.`);
-		return;
-	}
-
-	const newField = document.createElement('div');
-	newField.classList.add('dynamic-field'); // Добавляем класс, чтобы было удобнее искать
-	newField.innerHTML = `
-		<input type="text" name="${inputName}[]" placeholder="${placeholder}">
-		<label>
-			<input type="checkbox" name="${checkboxName}[]"> Арендатор
-		</label>
-		<button type="button" class="remove-field">Удалить</button>
-	`;
-
-	// Теперь находим кнопку "Добавить" ВНУТРИ ЭТОГО КОНТЕЙНЕРА
-	const addButton = container.querySelector(`button[id^="add"]`);
-
-	// Проверяем, что кнопка найдена и находится внутри текущего контейнера
-	if (addButton && container.contains(addButton)) {
-		container.insertBefore(newField, addButton); // Вставляем перед кнопкой
-	} else {
-		container.appendChild(newField); // Если кнопка не найдена, добавляем поле в конец контейнера
-		console.warn(`⚠️ Внимание: Кнопка 'Добавить' не найдена в ${containerId}, поле добавлено в конец`);
-	}
+    try{
+      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/residents`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(data)
+      });
+      if(resp.ok){
+        new (BSM())($('#addResidentModal')).hide();
+        location.reload();
+      }else{
+        const err = await resp.json().catch(()=>({}));
+        alert('Ошибка: ' + (err.message || resp.status));
+      }
+    }catch(e){ alert('Ошибка соединения'); }
+  });
 }
 
-// Обработчик кликов на кнопки "Добавить"
-document.getElementById('addResidentModal').addEventListener('click', function (event) {
-	if (event.target.id === 'addApartmentField') {
-		addField('apartmentContainer', 'apartments', 'tenant', 'Введите номер квартиры');
-	}
-	if (event.target.id === 'addParkingField') {
-		addField('parkingContainer', 'parking', 'parkingTenant', 'Введите номер парковки');
-	}
-	if (event.target.id === 'addStorageField') {
-		addField('storageContainer', 'storages', 'storageTenant', 'Введите номер кладовой');
-	}
-});
+/** Отвязка жильца */
+function hookDetach(){
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.delete-resident');
+    if(!btn) return;
+    const residentId = btn.dataset.id;
+    const relation = btn.dataset.relation;
+    const relationId = +btn.dataset.relationId;
+    if(!residentId || !relation || !relationId) return;
 
-// Функция открытия модального окна добавления жильца
-function openAddResidentModal(type, number) {
-	const modal = document.getElementById('addResidentModal');
-	modal.style.display = 'flex';
-
-	const form = document.getElementById('addResidentForm');
-	form.reset();
-
-	const houseId = new URLSearchParams(window.location.search).get('id');
-	form.dataset.houseId = houseId;
-
-	if (type === 'apartment') {
-		form.querySelector('input[name="apartments[]"]').value = number;
-	} else if (type === 'parking') {
-		form.querySelector('input[name="parking[]"]').value = number;
-	} else if (type === 'storage') {
-		form.querySelector('input[name="storages[]"]').value = number;
-	}
+    if(!confirm('Отвязать жильца от этого объекта?')) return;
+    try{
+      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}/link`, {
+        method:'DELETE',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ relation, relation_id: relationId })
+      });
+      if(resp.ok){ location.reload(); }
+      else{
+        const err=await resp.json().catch(()=>({}));
+        alert('Ошибка: ' + (err.message || resp.status));
+      }
+    }catch{ alert('Ошибка соединения'); }
+  });
 }
 
-// Обработчик для отправки формы "Добавить жильца"
-document.getElementById('addResidentForm').onsubmit = async function (e) {
-	e.preventDefault();
+/** Загрузка жильца и открытие модалки редактирования */
+async function openEditResidentModal(residentId){
+  try{
+    const r = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${residentId}`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
 
-	const formData = new FormData(this);
-	const houseId = this.dataset.houseId;
+    $('#editFullName').value = d.full_name || '';
+    $('#editTelegram').value = d.telegram || '';
+    $('#editPhone').value    = d.phone || '';
+    $('#editEmail').value    = d.email || '';
 
-	const data = {
-		full_name: formData.get('full_name'),
-		telegram: formData.get('telegram') || null,
-		phone: formData.get('phone') || null,
-		email: formData.get('email') || null,
-		apartments: [],
-		parking: [],
-		storages: [],
-		privacy: getPrivacyFromModal(document.getElementById('addResidentModal'))
-	};
+    // приватность
+    initPrivacyIconToggles($('#editResidentModal'));
+    // применим состояние глаз
+    const setEye = (key, show)=>{
+      const btn = $('#editResidentModal').querySelector(`.privacy-toggle[data-target="${key}"]`);
+      if(!btn) return;
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      btn.innerHTML = `<i class="ti ${show ? 'ti-eye' : 'ti-eye-off'}"></i>`;
+    };
+    setEye('name',     d?.privacy?.show_full_name !== false);
+    setEye('phone',    d?.privacy?.show_phone     !== false);
+    setEye('email',    d?.privacy?.show_email     !== false);
+    setEye('telegram', d?.privacy?.show_telegram  !== false);
 
-	// **Фильтруем пустые значения перед отправкой**
-	document.querySelectorAll('input[name="apartments[]"]').forEach((input, index) => {
-		const value = input.value.trim();
-		if (value && !isNaN(value)) { // Если значение не пустое и это число
-			data.apartments.push({
-					number: parseInt(value, 10), // Преобразуем в число
-					tenant: document.querySelectorAll('input[name="tenant[]"]')[index].checked
-			});
-		}
-	});
+    // контейнеры связей
+    const cA = $('#editApartmentContainer'); cA.innerHTML = '<label class="form-label">Квартиры</label>';
+    const cP = $('#editParkingContainer');   cP.innerHTML = '<label class="form-label">Парковочные места</label>';
+    const cS = $('#editStorageContainer');   cS.innerHTML = '<label class="form-label">Кладовые</label>';
 
-	document.querySelectorAll('input[name="parking[]"]').forEach((input, index) => {
-		const value = input.value.trim();
-		if (value && !isNaN(value)) {
-			data.parking.push({
-					number: parseInt(value, 10),
-					tenant: document.querySelectorAll('input[name="parkingTenant[]"]')[index].checked
-			});
-		}
-	});
+    (d.apartments||[]).forEach(a=>{
+      const row=document.createElement('div');
+      row.className='d-flex gap-2 align-items-center mb-2';
+      row.innerHTML=`
+        <input type="text" class="form-control" name="apartments[]" value="${a.number||''}" placeholder="Номер квартиры">
+        <label class="form-check m-0">
+          <input class="form-check-input" type="checkbox" name="tenant[]" ${a.tenant?'checked':''}>
+          <span class="form-check-label">Арендатор</span>
+        </label>
+        <button type="button" class="btn btn-link text-danger remove-field p-0"><i class="ti ti-x"></i></button>`;
+      cA.appendChild(row);
+    });
 
-	document.querySelectorAll('input[name="storages[]"]').forEach((input, index) => {
-		const value = input.value.trim();
-		if (value && !isNaN(value)) {
-			data.storages.push({
-					number: parseInt(value, 10),
-					tenant: document.querySelectorAll('input[name="storageTenant[]"]')[index].checked
-			});
-		}
-	});
+    (d.parking||[]).forEach(p=>{
+      const row=document.createElement('div');
+      row.className='d-flex gap-2 align-items-center mb-2';
+      row.innerHTML=`
+        <input type="text" class="form-control" name="parking[]" value="${p.number||''}" placeholder="Номер парковки">
+        <label class="form-check m-0">
+          <input class="form-check-input" type="checkbox" name="parkingTenant[]" ${p.tenant?'checked':''}>
+          <span class="form-check-label">Арендатор</span>
+        </label>
+        <button type="button" class="btn btn-link text-danger remove-field p-0"><i class="ti ti-x"></i></button>`;
+      cP.appendChild(row);
+    });
 
-	console.log("📤 Отправляем данные:", JSON.stringify(data, null, 2));
+    (d.storages||[]).forEach(s=>{
+      const row=document.createElement('div');
+      row.className='d-flex gap-2 align-items-center mb-2';
+      row.innerHTML=`
+        <input type="text" class="form-control" name="storages[]" value="${s.number||''}" placeholder="Номер кладовой">
+        <label class="form-check m-0">
+          <input class="form-check-input" type="checkbox" name="storageTenant[]" ${s.tenant?'checked':''}>
+          <span class="form-check-label">Арендатор</span>
+        </label>
+        <button type="button" class="btn btn-link text-danger remove-field p-0"><i class="ti ti-x"></i></button>`;
+      cS.appendChild(row);
+    });
 
-	try {
-		const response = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/residents`, {
-			method: 'POST',
-			headers: {
-					'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(data)
-		});
+    // поведение удаления строк
+    $('#editResidentModal').addEventListener('click', (e)=>{
+      if(e.target.closest('.remove-field')) e.target.closest('.remove-field').closest('.mb-2')?.remove();
+    });
 
-		if (response.ok) {
-			alert('Жилец успешно добавлен!');
-			this.reset();
-			document.getElementById('addResidentModal').style.display = 'none';
-			location.reload(); // Перезагрузка страницы для обновления данных
-		} else {
-			const error = await response.json();
-			alert(`Ошибка: ${error.message}`);
-		}
-	} catch (error) {
-		console.error('Ошибка сети:', error);
-		alert('Ошибка подключения к серверу.');
-	}
-};
+    // сохраняем id
+    const form = $('#editResidentForm');
+    form.dataset.residentId = d.id;
+    form.dataset.houseId = d.house_id || new URLSearchParams(location.search).get('id') || '';
 
-// Обработчик для удаления динамических полей
-document.addEventListener('click', function (event) {
-	if (event.target.classList.contains('remove-field')) {
-		event.target.parentElement.remove();
-	}
-});
-
-// Функция сброса формы перед закрытием модального окна
-function resetAddResidentForm() {
-	const form = document.getElementById('addResidentForm');
-	form.reset(); // Очищаем стандартные поля
-
-	// Удаляем все динамически добавленные поля (квартиры, парковки, кладовые)
-	document.querySelectorAll('#apartmentContainer .dynamic-field').forEach(field => field.remove());
-	document.querySelectorAll('#parkingContainer .dynamic-field').forEach(field => field.remove());
-	document.querySelectorAll('#storageContainer .dynamic-field').forEach(field => field.remove());
-
-	console.log('🔄 Форма сброшена и очищены динамические поля.');
+    showModalById('#editResidentModal');
+  }catch(e){ alert('Ошибка загрузки данных жильца'); }
 }
 
-// Закрытие модального окна + сброс формы
-document.querySelector('#addResidentModal .close').addEventListener('click', () => {
-	document.getElementById('addResidentModal').style.display = 'none';
-	resetAddResidentForm();
-});
+/** Сабмит редактирования жильца */
+function hookEditSubmit(){
+  $('#editResidentForm')?.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const id=this.dataset.residentId;
+    const houseId=this.dataset.houseId;
 
-// Закрытие модального окна при клике вне него + сброс формы
-window.addEventListener('click', (event) => {
-	const modal = document.getElementById('addResidentModal');
-	if (event.target === modal) {
-		modal.style.display = 'none';
-		resetAddResidentForm();
-	}
+    const data = {
+      full_name: $('#editFullName').value,
+      telegram: $('#editTelegram').value || null,
+      phone:    $('#editPhone').value || null,
+      email:    $('#editEmail').value || null,
+      house_id: houseId,
+      apartments: [], parking: [], storages: [],
+      privacy: getPrivacyFromModal($('#editResidentModal'))
+    };
+
+    $$('#editApartmentContainer input[name="apartments[]"]').forEach((inp, idx)=>{
+      const num=(inp.value||'').trim(); if(!num||isNaN(num)) return;
+      const chk=$$('#editApartmentContainer input[name="tenant[]"]')[idx];
+      data.apartments.push({number:parseInt(num,10), tenant:!!(chk&&chk.checked)});
+    });
+    $$('#editParkingContainer input[name="parking[]"]').forEach((inp, idx)=>{
+      const num=(inp.value||'').trim(); if(!num||isNaN(num)) return;
+      const chk=$$('#editParkingContainer input[name="parkingTenant[]"]')[idx];
+      data.parking.push({number:parseInt(num,10), tenant:!!(chk&&chk.checked)});
+    });
+    $$('#editStorageContainer input[name="storages[]"]').forEach((inp, idx)=>{
+      const num=(inp.value||'').trim(); if(!num||isNaN(num)) return;
+      const chk=$$('#editStorageContainer input[name="storageTenant[]"]')[idx];
+      data.storages.push({number:parseInt(num,10), tenant:!!(chk&&chk.checked)});
+    });
+
+    try{
+      const resp = await fetch(`${window.DOMUS_API_BASE_URL}/residents/${id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)
+      });
+      if(resp.ok){ new (BSM())($('#editResidentModal')).hide(); location.reload(); }
+      else{ const err = await resp.json().catch(()=>({})); alert('Ошибка: '+(err.message||resp.status)); }
+    }catch{ alert('Ошибка соединения'); }
+  });
+}
+
+/** Навешиваем: клик "редактировать" из оффканваса */
+function hookEditFromDrawer(){
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.edit-resident'); if(!btn) return;
+    openEditResidentModal(btn.dataset.id);
+  });
+}
+
+/** Инициализация страницы */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Кнопка "Добавить жильца" в шапке — пустая форма
+  $('#openAddResidentBlank')?.addEventListener('click', ()=> openAddResidentModalPrefill('apartment',''));
+
+  // Инициализация кнопок/сабмитов модалок
+  hookAddButtons();
+  hookAddResidentSubmit();
+  hookEditSubmit();
+  hookEditFromDrawer();
+  hookDetach();
+
+  const houseId = new URLSearchParams(location.search).get('id');
+  try{
+    const r = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/structure`);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const house = await r.json();
+
+    // заголовок/метаданные
+    $('#houseName').textContent = house.name || 'Дом';
+    $('#houseMeta').textContent = house.address || '';
+
+    // шахматка
+    const maxFloors = Math.max(...(house.Entrances||[]).map(e=>n0(e.floors_count)), 0);
+    buildFloorsColumn($('#floorsLeft'), maxFloors);
+    buildFloorsColumn($('#floorsRight'), maxFloors);
+
+    const board = $('#chessboard'); board.innerHTML='';
+    (house.Entrances||[]).sort((a,b)=>n0(a.entrance_number)-n0(b.entrance_number))
+      .forEach(e=> board.appendChild(renderEntranceColumn(e, maxFloors, !!house.non_residential_first_floor)));
+
+    // паркинг / кладовые
+    buildParking(house);
+    buildStorages(house);
+
+  }catch(e){
+    console.error(e);
+    $('#chessboard').innerHTML = '<div class="p-3 text-danger">Ошибка загрузки данных</div>';
+  }
 });

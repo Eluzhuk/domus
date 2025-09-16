@@ -85,151 +85,166 @@
 }
 
 /* =========================================================
-   6) ШАХМАТКА ДЛЯ ДОМОВ (подъезды/этажи/квартиры)
+   Domus — Визуализация: квартиры/паркинг/кладовые
    ========================================================= */
-#chessboard {
-	display: flex; /* Горизонтальный ряд для подъездов */
-	gap: 5px; /* Уменьшение расстояния между подъездами */
-	justify-content: center; /* Центрирование шахматки */
-	align-items: flex-end; /* Выровнять подъезды по нижнему краю */
+:root {
+  --domus-cell: 28px;            /* базовый размер клетки */
+  --domus-cell-gap: 4px;         /* зазор между клетками/строками */
+  --domus-floor-col-w: 56px;     /* ширина колонки этажей */
+  --domus-row-h: 28px;           /* высота строки этажа */
+  --domus-header-h: calc(var(--domus-row-h) + var(--domus-cell-gap)); /* ЕДИНАЯ высота заголовка */
 }
 
-.entrance {
-	display: flex;
-	flex-direction: column;
-	border: 1px solid #ddd;
-	margin: 5px;
-	padding: 5px;
-	background-color: #f9f9f9;
+
+/* Адаптация размеров на маленьких/больших экранах */
+@media (max-width: 1200px){
+  :root { --domus-cell: 26px; --domus-row-h: 26px; }
+}
+@media (max-width: 768px){
+  :root { --domus-cell: 24px; --domus-row-h: 24px; }
+}
+@media (min-width: 1600px){
+  :root { --domus-cell: 32px; --domus-row-h: 32px; }
 }
 
-.entrance-wrapper {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	margin: 0 5px;
+/* Обёртка: липкие колонки этажей + горизонтальный скролл */
+.domus-board {
+  display: grid;
+  grid-template-columns: var(--domus-floor-col-w) 1fr var(--domus-floor-col-w);
+  column-gap: 8px;            /* ✨ «Воздух» между левой/правой колонками этажей и скролл-лентой */
+  align-items: stretch;
 }
 
-.entrance-label {
-	margin-top: 5px;
-	font-size: 14px;
-	font-weight: bold;
-	color: #333;
-	text-align: center;
+/* Колонки этажей (слева/справа) */
+.floors-col {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--tblr-border-color);
+}
+.floors-col-right { border-right: 0; border-left: 1px solid var(--tblr-border-color); }
+
+.floors-col-header {
+  height: var(--domus-header-h);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: .85rem;
+  background: var(--tblr-bg-surface);
+  position: sticky; top: 0; z-index: 1;
+  margin-bottom: 8px;  /* тот же «зазор», что и у строк этажей */
+  margin-top: 8px;
 }
 
-.floor {
-	display: flex; /* Квартиры на этаже отображаются в ряд */
+.floors-col-body .floor-index {
+  width: 100%; height: var(--domus-row-h);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tblr-secondary); font-weight: 600;
+  margin-bottom: var(--domus-cell-gap); /* тот же вертикальный зазор, что и между .floor-row */
 }
 
-/* Контейнер для колонки этажей */
-.floor-column-container {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	margin-right: 10px;
-	margin-bottom: 35px;
+/* Скролл-область с подъездами */
+.board-scroll {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 8px;           /* ✨ Внутренние отступы слева/справа для симметрии */
+  background: var(--tblr-bg-surface);
+  box-sizing: border-box;
 }
 
-/* Заголовок "Этаж" */
-.floor-column-header {
-	font-weight: bold;
-	text-align: center;
-	width: 50px;
-	height: 40px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+/* Контейнер подъездов */
+.entrances {
+  display: flex;
+  flex-wrap: nowrap;          /* не переносить подъезды */
+  gap: 8px;                   /* расстояние между подъездами */
+  padding: 0px 0;             /* ⬆️ только вертикальные отступы, горизонталь теперь у .board-scroll */
+  min-height: calc((var(--domus-row-h) * 12) + 16px);
 }
 
-/* Ячейки с номерами этажей */
-.floor-numbers {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
+/* Подписи подъезда: сверху и снизу */
+.entrance-header,
+.entrance-footer {
+  text-align: center;
+  font-weight: 600;
+  background: var(--tblr-bg-surface);
+  border: 1px solid var(--tblr-border-color);
+  border-radius: .5rem;
+  padding: 0 8px;                 /* горизонтальные отступы, БЕЗ вертикальных, чтобы высота была ровной */
+  box-sizing: border-box;
 }
 
-.floor-number {
-	height: 25px;
-	width: 25px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: bold;
-	background-color: #f0f0f0;
-	border: 1px solid #ccc;
-	margin-top: 4px;
-	font-size: 12px;
+/* Верхняя — липкая к верху и по высоте 1в1 как «Этаж» */
+.entrance-header {
+  position: sticky; top: 0; z-index: 1;
+  height: var(--domus-header-h);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
 }
 
-.apartment {
-	width: 25px;
-	height: 25px;
-	display: inline-flex;
-	justify-content: center;
-	align-items: center;
-	border: 1px solid #ccc;
-	margin: 2px;
-	background-color: #f1f1f1;
-	font-size: 10px;
-	font-weight: bold;
+/* Нижняя — симметричная, липкая к низу */
+.entrance-footer {
+  position: sticky; bottom: 0; z-index: 1;
+  height: var(--domus-header-h);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: var(--domus-cell-gap);
 }
 
-.apartment.non-residential {
-	background-color: #d3d3d3; /* Серый цвет для нежилых квартир */
-	color: #666;
-	cursor: not-allowed;
+
+.entrance-col {
+  display: flex; flex-direction: column; align-items: stretch;
+  flex: 0 0 auto; /* не сжимать колонку */
+  /* ширина = кол-во колонок * размер клетки + зазоры между ними */
+  width: calc(
+    (var(--cols, 1) * var(--domus-cell)) +
+    ((var(--cols, 1) - 1) * var(--domus-cell-gap))
+  );
 }
 
-.apartment.occupied, .parking-spot.occupied,.storage-unit.occupied {
-	background-color: #FFC107;
+/* Ряд этажа — одинаковой высоты для всех подъездов */
+.floor-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), var(--domus-cell));
+  gap: var(--domus-cell-gap);
+  height: var(--domus-row-h);
+  align-items: center;
+  margin-bottom: var(--domus-cell-gap);
 }
 
-/* =========================================================
-   8) ПАРКИНГ И КЛАДОВЫЕ (уровни, сетки, ячейки)
-   ========================================================= */
+
+/* Ячейки */
+.cell {
+  width: var(--domus-cell);
+  height: var(--domus-row-h);
+  border: 1px solid var(--tblr-border-color);
+  border-radius: .25rem;
+  background: #f1f1f1;
+  font-size: .75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; cursor: pointer;
+}
+.cell-empty { background: #fafafa; border-style: dashed; }
+.cell-nonres { background: #e3e3e3; color: #666; cursor: not-allowed; }
+.cell.occupied { background: #FFC107; color: #000; }
+
+/* Паркинг / Кладовые карточки */
 .parking-level, .storage-level {
-	margin-top: 20px;
-	border: 1px solid #ddd;
-	padding: 10px;
-	background-color: #f9f9f9;
-	border-radius: 8px;
+  border: 1px dashed var(--tblr-border-color);
+  border-radius: .5rem;
+  padding: 12px; margin-bottom: 12px;
 }
-
-.parking-level h3, .storage-level h3 {
-	margin-bottom: 10px;
-	font-size: 16px;
-	text-align: center;
-}
+.parking-title, .storage-title { text-align: center; font-weight: 600; margin-bottom: 8px; }
 
 .parking-grid, .storage-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, 25px); /* Автоматически подстраивает количество колонок */
-	gap: 5px;
-	justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--domus-cell));
+  gap: var(--domus-cell-gap);
+  justify-content: center;
 }
+.parking-spot, .storage-unit { /* наследуют .cell через JS-рендер? защитное дублирование: */
+  width: var(--domus-cell); height: var(--domus-row-h);
+  border: 1px solid var(--tblr-border-color);
+  border-radius: .25rem; background: #e0e0e0;
+  font-size: .75rem; font-weight: 700; display:flex; align-items:center; justify-content:center;
+  cursor: pointer;
+}
+.parking-spot.occupied, .storage-unit.occupied { background: #FFC107; }
 
-.parking-spot, .storage-unit {
-	width: 25px;
-	height: 25px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: #e0e0e0;
-	border: 1px solid #ccc;
-	font-size: 12px;
-	font-weight: bold;
-	border-radius: 4px;
-	text-align: center;
-}
-
-/* === Domus / Houses card helpers === */
-.ratio .img-cover {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* заполняем, сохраняя кроп */
-}
-.card .metric-label {
-  font-size: .75rem;
-  color: var(--tblr-secondary);
-}
+/* Мелкие улучшения */
+#houseMeta { margin-top: .25rem; }
