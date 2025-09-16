@@ -219,8 +219,8 @@
   display: flex; align-items: center; justify-content: center;
   user-select: none; cursor: pointer;
 }
-.cell-empty { background: #fafafa; border-style: dashed; }
-.cell-nonres { background: #e3e3e3; color: #666; cursor: not-allowed; }
+.cell-empty { background: #f1f1f1; border-style: dashed; }
+.cell-nonres { background: #bebebe; color: #666; cursor: not-allowed; }
 .cell.occupied { background: #FFC107; color: #000; }
 
 /* Паркинг / Кладовые карточки */
@@ -240,7 +240,7 @@
 .parking-spot, .storage-unit { /* наследуют .cell через JS-рендер? защитное дублирование: */
   width: var(--domus-cell); height: var(--domus-row-h);
   border: 1px solid var(--tblr-border-color);
-  border-radius: .25rem; background: #e0e0e0;
+  border-radius: .25rem; background: #fafafa;
   font-size: .75rem; font-weight: 700; display:flex; align-items:center; justify-content:center;
   cursor: pointer;
 }

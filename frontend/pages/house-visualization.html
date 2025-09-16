@@ -14,8 +14,8 @@
 <body>
   <main class="content" id="main" tabindex="-1">
     <!-- Шапка страницы -->
-    <div class="container-xl">
-      <div class="page-header d-print-none">
+    <div class="container-xl px-0">
+      <div class="page-header d-print-none mb-4 mt-0">
         <div class="row align-items-center">
           <div class="col">
             <h2 class="page-title" id="houseName">Визуализация дома</h2>
@@ -27,7 +27,7 @@
                 <i class="ti ti-arrow-left"></i> Назад к домам
               </a>
               <button id="openAddResidentBlank" class="btn btn-primary">
-                <i class="ti ti-user-plus"></i> Добавить жильца
+                <i class="ti ti-user-plus me-1"></i> Добавить жильца
               </button>
             </div>
           </div>
@@ -36,15 +36,15 @@
     </div>
 
     <!-- Карточка с шахматкой -->
-    <div class="container-xl">
+    <div class="container-xl px-0">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title" id="chessboard-heading">Квартиры</h3>
           <div class="card-actions">
             <div class="text-secondary small" id="boardLegend">
-              <span class="badge me-1" style="background:#e0e0e0;color:#000;">Свободно</span>
-              <span class="badge bg-yellow me-1">Занято</span>
-              <span class="badge bg-muted">Нежилой этаж</span>
+              <span class="badge me-1" style="background:#f1f1f1;color:#000;">Свободно</span>
+              <span class="badge me-1" style="background:#FFC107;color:#000;">Занято</span>
+              <span class="badge me-1" style="background: #bebebe;;color:#000;">Нежилой этаж</span>
             </div>
           </div>
         </div>
