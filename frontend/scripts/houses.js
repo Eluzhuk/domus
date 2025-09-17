@@ -211,19 +211,19 @@ function renderHouseCard(h) {
       <div class="card-body">
         <!-- Верхняя строка: слева — жильцы, справа — действия -->
         <div class="d-flex justify-content-between align-items-center">
-			<span class="badge bg-azure text-blue-fg" title="Количество жильцов"><i class="ti ti-users me-1"></i>${residents}</span>
-			<div class="btn-list">
-				<button class="btn btn-outline-primary btn-sm add-resident" data-id="${id}" title="Добавить жильца">
-					<i class="ti ti-user-plus"></i>
-				</button>
-				<button class="btn btn-outline-secondary btn-sm edit-house" data-id="${id}" title="Редактировать дом">
-					<i class="ti ti-edit"></i>
-				</button>
-				<button class="btn btn-outline-danger btn-sm delete-house" data-id="${id}" title="Удалить дом">
-					<i class="ti ti-trash"></i>
-				</button>
-			</div>
-		</div>
+          <span class="badge bg-azure text-blue-fg"><i class="ti ti-users me-1"></i>${residents}</span>
+          <div class="btn-list">
+            <button class="btn btn-outline-primary btn-sm add-resident" data-id="${id}" title="Добавить жильца">
+              <i class="ti ti-user-plus"></i>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm edit-house" data-id="${id}" title="Редактировать дом">
+              <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-sm delete-house" data-id="${id}" title="Удалить дом">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>
 
         <!-- Slug (если есть) -->
         ${slugRow}
@@ -256,7 +256,7 @@ function renderHouseCard(h) {
       <!-- Футер — только кнопка "Открыть" (админская визуализация) -->
       <div class="card-footer d-flex align-items-center justify-content-end">
         <a href="#" class="btn btn-primary btn-sm open-visual" data-id="${id}" title="Визуализация">
-          Шахматка <i class="ti ti-login-2 ms-1"></i>
+          Открыть <i class="ti ti-login-2 ms-1"></i>
         </a>
       </div>
     </div>
@@ -306,62 +306,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const slug = makeSlugFromName(name);
     const slugInput = document.getElementById('houseSlug');
     if (slugInput) slugInput.value = slug;
-    // showToast? — глобальная утилита проекта (если есть)
     try { window.showToast?.('success', slug ? 'Сгенерирован slug' : 'Введите название'); } catch {}
   });
 
-/**
- * Сбрасывает форму создания дома (модалка #houseModal) до чистого состояния.
- * Очищает поля, чекбоксы, скрывает секции и удаляет динамически добавленные блоки.
- */
-function resetCreateHouseModal() {
-  /** @type {HTMLFormElement|null} */
-  const form = document.getElementById('houseForm');
-  if (form) form.reset(); // стандартные поля name/address/checkboxes
-
-  // slug явно чистим, т.к. form.reset() для кастомных случаев не всегда предсказуем
-  const slugInput = document.getElementById('houseSlug');
-  if (slugInput) slugInput.value = '';
-
-  // Снять чекбоксы «добавить паркинг/кладовые»
-  const addParkingChk = document.getElementById('addParking');
-  if (addParkingChk) addParkingChk.checked = false;
-  const addStorageChk = document.getElementById('addStorage');
-  if (addStorageChk) addStorageChk.checked = false;
-
-  // Скрыть и очистить Паркинг
-  const parkingContainer = document.getElementById('parkingContainer');
-  if (parkingContainer) {
-    parkingContainer.style.display = 'none';
-    parkingContainer.querySelectorAll('.parkingLevel').forEach(n => n.remove());
-  }
-
-  // Скрыть и очистить Кладовые
-  const storageContainer = document.getElementById('storageContainer');
-  if (storageContainer) {
-    storageContainer.style.display = 'none';
-    storageContainer.querySelectorAll('.storageLevel').forEach(n => n.remove());
-  }
-
-  // Удалить все добавленные подъезды
-  const entrancesContainer = document.getElementById('entrancesContainer');
-  if (entrancesContainer) {
-    entrancesContainer.innerHTML = '';
-  }
-
-  // Нежилой первый этаж — снять (на всякий)
-  const nonRes = document.getElementById('nonResidential');
-  if (nonRes) nonRes.checked = false;
-}
-
-// Сбрасывать модалку при каждом закрытии (любой способ закрытия)
-if (houseModalEl) {
-  houseModalEl.addEventListener('hidden.bs.modal', resetCreateHouseModal);
-}
-
   // Кнопка "Добавить дом"
   document.getElementById('openModal')?.addEventListener('click', (e) => {
-    e.preventDefault(); resetCreateHouseModal(); houseModal?.show();
+    e.preventDefault(); houseModal?.show();
   });
 
   // Загрузка домов
@@ -380,7 +330,7 @@ if (houseModalEl) {
         </div>
       </div>`;
       document.getElementById('openModalEmpty')?.addEventListener('click', (e) => {
-        e.preventDefault(); resetCreateHouseModal(); houseModal?.show();
+        e.preventDefault(); houseModal?.show();
       });
     } else {
       const frag = document.createDocumentFragment();
@@ -415,7 +365,6 @@ if (houseModalEl) {
         await navigator.clipboard.writeText(url);
         window.showToast?.('success', 'Ссылка скопирована');
       } catch {
-        // Фолбэк: prompt
         window.prompt?.('Скопируйте ссылку:', url);
       }
       return;
@@ -632,51 +581,39 @@ if (houseModalEl) {
   });
 
   // ====== Модалка "Добавить жильца" ======
-  document.getElementById('addApartmentField')?.addEventListener('click', function() {
-    const c = document.getElementById('apartmentContainer');
-    const el = document.createElement('div');
-    el.className = 'd-flex gap-2 align-items-center apartment-input mb-2';
-    el.innerHTML = `
-      <input type="text" class="form-control" name="apartments[]" placeholder="Номер квартиры">
-      <label class="form-check m-0">
-        <input class="form-check-input" type="checkbox" name="tenant[]">
-        <span class="form-check-label">Арендатор</span>
-      </label>
-      <button type="button" class="btn btn-link text-danger remove-field p-0">Удалить</button>`;
-    c.insertBefore(el, this);
-  });
+  // ВАЖНО: на houses.html есть ДУБЛИ ID (#parkingContainer, #storageContainer) в разных модалках.
+  // Поэтому все выборки делаем ТОЛЬКО ВНУТРИ модалки добавления жильца через делегирование.
+  addResidentModalEl?.addEventListener('click', function (e) {
+    const modal = addResidentModalEl;
 
-  document.getElementById('addParkingField')?.addEventListener('click', function() {
-    const c = document.getElementById('parkingContainer');
-    const el = document.createElement('div');
-    el.className = 'd-flex gap-2 align-items-center parking-input mb-2';
-    el.innerHTML = `
-      <input type="text" class="form-control" name="parking[]" placeholder="Номер парковки">
-      <label class="form-check m-0">
-        <input class="form-check-input" type="checkbox" name="parkingTenant[]">
-        <span class="form-check-label">Арендатор</span>
-      </label>
-      <button type="button" class="btn btn-link text-danger remove-field p-0">Удалить</button>`;
-    c.insertBefore(el, this);
-  });
+    const addField = (containerId, inputName, checkboxName, placeholder) => {
+      const c = modal.querySelector(`#${containerId}`);
+      if (!c) return;
+      const row = document.createElement('div');
+      row.className = `d-flex gap-2 align-items-center mb-2 ${inputName.replace(/\[\]/,'')}-input dynamic-field`;
+      row.innerHTML = `
+        <input type="text" class="form-control" name="${inputName}[]" placeholder="${placeholder}">
+        <label class="form-check m-0">
+          <input class="form-check-input" type="checkbox" name="${checkboxName}[]">
+          <span class="form-check-label">Арендатор</span>
+        </label>
+        <button type="button" class="btn btn-link text-danger remove-field p-0">Удалить</button>`;
+      const btn = c.querySelector('button[id^="add"]');
+      c.insertBefore(row, btn || null);
+    };
 
-  document.getElementById('addStorageField')?.addEventListener('click', function() {
-    const c = document.getElementById('storageContainer');
-    const el = document.createElement('div');
-    el.className = 'd-flex gap-2 align-items-center storage-input mb-2';
-    el.innerHTML = `
-      <input type="text" class="form-control" name="storages[]" placeholder="Номер кладовой">
-      <label class="form-check m-0">
-        <input class="form-check-input" type="checkbox" name="storageTenant[]">
-        <span class="form-check-label">Арендатор</span>
-      </label>
-      <button type="button" class="btn btn-link text-danger remove-field p-0">Удалить</button>`;
-    c.insertBefore(el, this);
-  });
+    if (e.target.id === 'addApartmentField') {
+      addField('apartmentContainer', 'apartments', 'tenant', 'Номер квартиры');
+    }
+    if (e.target.id === 'addParkingField') {
+      addField('parkingContainer', 'parking', 'parkingTenant', 'Номер парковки');
+    }
+    if (e.target.id === 'addStorageField') {
+      addField('storageContainer', 'storages', 'storageTenant', 'Номер кладовой');
+    }
 
-  document.addEventListener('click', (e) => {
-    if (e.target.classList?.contains('remove-field')) {
-      e.target.closest('.apartment-input, .parking-input, .storage-input')?.remove();
+    if (e.target.classList.contains('remove-field')) {
+      e.target.closest('.dynamic-field')?.remove();
     }
   });
 
@@ -697,36 +634,35 @@ if (houseModalEl) {
       storages: []
     };
 
-    // массивы присвоений
-    document.querySelectorAll('input[name="apartments[]"]').forEach((input, index) => {
+    // массивы присвоений (берём ТОЛЬКО из модалки добавления жильца)
+    addResidentModalEl.querySelectorAll('input[name="apartments[]"]').forEach((input, index) => {
       data.apartments.push({
         number: input.value,
-        tenant: document.querySelectorAll('input[name="tenant[]"]')[index]?.checked || false
+        tenant: addResidentModalEl.querySelectorAll('input[name="tenant[]"]')[index]?.checked || false
       });
     });
-    document.querySelectorAll('input[name="parking[]"]').forEach((input, index) => {
+    addResidentModalEl.querySelectorAll('input[name="parking[]"]').forEach((input, index) => {
       data.parking.push({
         number: input.value,
-        tenant: document.querySelectorAll('input[name="parkingTenant[]"]')[index]?.checked || false
+        tenant: addResidentModalEl.querySelectorAll('input[name="parkingTenant[]"]')[index]?.checked || false
       });
     });
-    document.querySelectorAll('input[name="storages[]"]').forEach((input, index) => {
+    addResidentModalEl.querySelectorAll('input[name="storages[]"]').forEach((input, index) => {
       data.storages.push({
         number: input.value,
-        tenant: document.querySelectorAll('input[name="storageTenant[]"]')[index]?.checked || false
+        tenant: addResidentModalEl.querySelectorAll('input[name="storageTenant[]"]')[index]?.checked || false
       });
     });
 
     /** Публичность (маскирование в шахматке) */
     const privacy = {
-      // если переключатель в модалке включён — поле показываем
       show_name:     isPrivacyOn('name'),
       show_phone:    isPrivacyOn('phone'),
       show_email:    isPrivacyOn('email'),
       show_telegram: isPrivacyOn('telegram'),
     };
-    data.resident_privacy = privacy; // ожидаемый формат
-    data.privacy = privacy;          // дублируем на случай другого ожидания контроллера
+    data.resident_privacy = privacy;
+    data.privacy = privacy;
 
     try {
       const resp = await fetch(`${window.DOMUS_API_BASE_URL}/houses/${houseId}/residents`, {
