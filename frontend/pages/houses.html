@@ -33,7 +33,16 @@
 						<input type="text" class="form-control" id="houseAddress" required autocomplete="street-address" />
 						</div>
 						<div class="col-12">
-						<label class="form-check">
+						<label class="form-label" for="houseSlug">Slug</label>
+						<input type="text" class="form-control" id="houseSlug" required autocomplete="slug" placeholder="например, dom-1-na-pushkina" />
+						<button type="button" id="generateSlug" class="btn btn-outline-primary btn-sm mt-2" title="Сгенерировать из названия">Сгенерировать</button>
+						</div>
+						<div>
+						<small class="form-hint">Slug нужен для публичной ссылки: /pages/board.html?slug=&lt;slug&gt;. Разрешены только латиница, цифры и дефисы.</small>
+						</div>
+						<div class="hr-text">Структура дома</div>
+						<div class="col-12">
+						<label class="form-check mb-1">
 							<input class="form-check-input" type="checkbox" id="nonResidential"/>
 							<span class="form-check-label">Нежилой первый этаж</span>
 						</label>
@@ -127,6 +136,12 @@
 						<label class="form-label" for="editAddress">Адрес дома</label>
 						<input type="text" id="editAddress" class="form-control" required autocomplete="street-address" />
 					</div>
+					<div class="mb-2">
+						<label class="form-label" for="editSlug">Slug</label>
+						<input type="text" id="editSlug" class="form-control" required autocomplete="street-address" placeholder="например, dom-1-na-pushkina"/>
+						<small class="form-hint">Если оставить пустым, сервер сгенерирует на основе названия (и обеспечит уникальность).</small>
+					</div>
+					
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-link" data-bs-dismiss="modal">Отмена</button>
