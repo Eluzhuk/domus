@@ -108,7 +108,8 @@
 }
 
 /* Обёртка: липкие колонки этажей + горизонтальный скролл */
-.domus-board {
+.domus-board,
+.domus-floor-sticky--header {
   display: grid;
   grid-template-columns: var(--domus-floor-col-w) 1fr var(--domus-floor-col-w);
   column-gap: 8px;            /* ✨ «Воздух» между левой/правой колонками этажей и скролл-лентой */
@@ -254,3 +255,8 @@
   vertical-align: middle;
   margin-top: -1px; /* чуть выравниваем по высоте строки */
 }
+
+/* Публичная шахматка */
+body.public-board header svg { max-width: 60vw; height: auto; }
+body.public-board .page-title { font-weight: 600; }
+

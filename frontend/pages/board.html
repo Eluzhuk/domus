@@ -1,33 +1,129 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<title>Шахматка дома</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<!-- Tabler CSS -->
-	<link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
-	<!-- Иконки -->
-	<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
-	<!-- Персонализация проекта -->
-	<link rel="stylesheet" href="../assets/styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Публичная шахматка — Domus</title>
+
+  <!-- 1) Tabler CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
+  <!-- 2) Tabler Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet"/>
+  <!-- 3) Общие стили проекта (включают стили шахматки) -->
+  <link rel="stylesheet" href="../assets/styles.css"/>
 </head>
-<body class="container py-3">
-<h1 class="h4 mb-3">Публичная шахматка</h1>
+<body class="public-board">
+  <div class="page">
+    <div class="page-wrapper">
+      <!-- Логотип по центру -->
+      <header class="container-xl px-0 py-4">
+        <div class="d-flex justify-content-center">
+          <svg width="180" height="48" viewBox="0 0 360 96" xmlns="http://www.w3.org/2000/svg" aria-label="Domus">
+            <rect rx="10" ry="10" x="2" y="2" width="356" height="92" fill="#F9FAFB" stroke="#E0E0E0"></rect>
+            <text x="50%" y="54%" text-anchor="middle" font-size="40" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" fill="#00A3E0" font-weight="700">DOMUS</text>
+          </svg>
+        </div>
+      </header>
 
-<div class="mb-3">
-	<label for="slug" class="form-label">Slug дома</label>
-	<input type="text" id="slug" class="form-control" placeholder="например, dom-1-podium" />
+      <!-- Заголовок дома -->
+      <div class="container-xl px-0">
+        <div class="page-header d-print-none my-3">
+          <div class="row align-items-center">
+            <div class="col">
+              <h2 class="page-title mb-1" id="houseName">Загрузка…</h2>
+              <div class="text-secondary" id="houseMeta"><!-- адрес --></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Карточка "Квартиры" с легендой -->
+      <div class="container-xl px-0">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" id="chessboard-heading">Квартиры</h3>
+            <div class="card-actions">
+              <div class="text-secondary small" id="boardLegend">
+                <span class="badge me-1" style="background:#f1f1f1;color:#000;">Пустая</span>
+                <span class="badge me-1" style="background:#FFC107;color:#000;">Заселили</span>
+                <span class="badge me-1" style="background:#bebebe;color:#000;">Нежилая</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <!-- Обёртка: липкие колонки этажей + горизонтальный скролл -->
+            <div class="domus-board" id="boardRoot" hidden>
+              <div class="floors-col floors-col-left">
+                <div class="floors-col-header">Этаж</div>
+                <div class="floors-col-body" id="floorsLeft"></div>
+              </div>
+
+              <div class="board-scroll">
+                <div class="entrances" id="chessboard"></div>
+              </div>
+
+              <div class="floors-col floors-col-right">
+                <div class="floors-col-header">Этаж</div>
+                <div class="floors-col-body" id="floorsRight"></div>
+              </div>
+            </div>
+
+            <div id="boardNotice" class="p-3 text-secondary">
+              Подгружаем данные… Если долго — проверьте <code>?slug=</code> в адресной строке.
+            </div>
+          </div>
+        </div>
+      </div>
+
+<!-- Паркинг -->
+<div class="container-xl px-0">
+  <div class="card mt-3" id="parkingCard">
+    <div class="card-header">
+      <h3 class="card-title" id="parking-heading">Парковочные места</h3>
+    </div>
+    <div class="card-body">
+      <div id="parking"></div>
+    </div>
+  </div>
 </div>
-<button id="loadBtn" class="btn btn-primary mb-4">Загрузить</button>
 
-<div id="board"></div>
+<!-- Кладовые -->
+<div class="container-xl px-0">
+  <div class="card mt-3" id="storagesCard">
+    <div class="card-header">
+      <h3 class="card-title" id="storages-heading">Кладовые</h3>
+    </div>
+    <div class="card-body">
+      <div id="storages"></div>
+    </div>
+  </div>
+</div>
 
-<script src="../scripts/config.js"></script>
-<script src="../scripts/ui.js"></script>
-<script src="../scripts/auth-guard.js"></script>
-<script src="../scripts/layout.js"></script>
-<script src="../scripts/board.js" defer></script>
-<!-- Tabler JS -->
-<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
+      <!-- Футер оставляем -->
+      <footer class="footer footer-transparent mt-auto py-3">
+        <div class="container-xl">
+          <div class="text-center text-secondary">© Domus by <a href="https://t.me/OlegRosh">OlegRosh</a></div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Offcanvas: сведения по ячейке/жильцам (только просмотр) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="residentDrawer" aria-labelledby="residentDrawerTitle">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title" id="residentDrawerTitle">Помещение</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button>
+  </div>
+  <div class="offcanvas-body" id="residentDrawerBody">
+    <!-- Контент заполняется из board.js -->
+  </div>
+</div>
+
+  <!-- Скрипты: без auth-guard и без layout -->
+  <script src="../scripts/config.js"></script>
+  <script src="../scripts/ui.js"></script>
+  <script src="../scripts/board.js" defer></script>
+  <!-- Tabler JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js" defer></script>
 </body>
 </html>
