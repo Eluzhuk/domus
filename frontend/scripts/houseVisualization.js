@@ -213,11 +213,12 @@ function openResidentDrawerFor(type, number, links){
   // Секции жильцов
   links.forEach(link=>{
     const res = link?.Resident || {};
-    const p = res?.privacy || {};
-    const showName     = p.show_full_name !== false;
-    const showPhone    = p.show_phone     !== false;
-    const showEmail    = p.show_email     !== false;
-    const showTelegram = p.show_telegram  !== false;
+const p = res?.privacy || {};
+    // Админская шахматка: игнорируем приватность — всегда показываем ПДн
+    const showName     = true;
+    const showPhone    = true;
+    const showEmail    = true;
+    const showTelegram = true;
 
     const card=document.createElement('div');
     card.className='card card-sm mb-2';
@@ -554,9 +555,50 @@ function hookDetach(){
     });
 
     // поведение удаления строк
-    $('#editResidentModal').addEventListener('click', (e)=>{
-      if(e.target.closest('.remove-field')) e.target.closest('.remove-field').closest('.mb-2')?.remove();
-    });
+// кнопки добавления и удаление строк (редактирование)
+    (()=>{
+      // Добавляем кнопки "Добавить ..." в конец каждого контейнера (без дублей при повторном открытии)
+      const mkBtn = (id, text)=>{
+        const b = document.createElement('button');
+        b.type='button'; b.id=id;
+        b.className='btn btn-outline-primary btn-sm';
+        b.innerHTML = `<i class="ti ti-plus me-1"></i>${text}`;
+        return b;
+      };
+      if(!cA.querySelector('#editAddApartmentField')) cA.appendChild(mkBtn('editAddApartmentField','Добавить квартиру'));
+      if(!cP.querySelector('#editAddParkingField'))   cP.appendChild(mkBtn('editAddParkingField','Добавить парковку'));
+      if(!cS.querySelector('#editAddStorageField'))   cS.appendChild(mkBtn('editAddStorageField','Добавить кладовую'));
+
+      // Делегирование кликов: добавить/удалить динамические строки
+      $('#editResidentModal').addEventListener('click', (e)=>{
+        const t = e.target;
+        const root = $('#editResidentModal');
+
+        const add = (containerId, inputName, checkboxName, placeholder)=>{
+          const c = root.querySelector('#'+containerId);
+          const row = document.createElement('div');
+          row.className='dynamic-field d-flex gap-2 align-items-center mb-2';
+          row.innerHTML = `
+            <input type="text" class="form-control" name="${inputName}[]" placeholder="${placeholder}">
+            <label class="form-check m-0">
+              <input class="form-check-input" type="checkbox" name="${checkboxName}[]">
+              <span class="form-check-label">Арендатор</span>
+            </label>
+            <button type="button" class="btn btn-link text-danger remove-field p-0"><i class="ti ti-x"></i></button>`;
+
+          // Вставляем перед кнопкой "Добавить", если она есть, иначе в конец
+          const btn = c.querySelector('button[id^="editAdd"]');
+          c.insertBefore(row, btn || null);
+        };
+
+        if(t.closest('#editAddApartmentField')) add('editApartmentContainer','apartments','tenant','Номер квартиры');
+        if(t.closest('#editAddParkingField'))   add('editParkingContainer','parking','parkingTenant','Номер парковки');
+        if(t.closest('#editAddStorageField'))   add('editStorageContainer','storages','storageTenant','Номер кладовой');
+
+        if(t.closest('.remove-field')) t.closest('.dynamic-field')?.remove();
+      });
+    })();
+
 
 	// ✅ Надёжно сохраняем ID в dataset и скрытом поле (берём ИЗ ПАРАМЕТРА idNum)
 	const form = $('#editResidentForm');

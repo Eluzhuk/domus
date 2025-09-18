@@ -266,10 +266,23 @@ exports.updateResident = async (req, res) => {
       });
     }
 
-    // при необходимости синхронизируйте связи:
-    // await syncApartments(residentId, payload.apartments || []);
-    // await syncParking(residentId, payload.parking || []);
-    // await syncStorages(residentId, payload.storages || []);
+    // синхронизируем связи (квартиры/парковки/кладовые) в рамках дома жильца
+    const houseIdForLinks = parseInt(resident.house_id, 10);
+    await syncApartments(
+      residentId,
+      Array.isArray(payload.apartments) ? payload.apartments : [],
+      houseIdForLinks
+    );
+    await syncParking(
+      residentId,
+      Array.isArray(payload.parking) ? payload.parking : [],
+      houseIdForLinks
+    );
+    await syncStorages(
+      residentId,
+      Array.isArray(payload.storages) ? payload.storages : [],
+      houseIdForLinks
+    );
 
     return res.json({ ok: true });
   } catch (err) {
