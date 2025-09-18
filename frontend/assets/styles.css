@@ -249,3 +249,8 @@
 /* Мелкие улучшения */
 #houseMeta { margin-top: .25rem; }
 
+/* Бейдж "Арендатор" рядом с именем жильца (админ-шахматка) */
+.domus-resident-name + .badge {
+  vertical-align: middle;
+  margin-top: -1px; /* чуть выравниваем по высоте строки */
+}

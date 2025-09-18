@@ -234,7 +234,7 @@ const editBtn = hasValidId
 	<div class="card-body">
 		<div class="d-flex justify-content-between">
 			<div>
-			<div class="fw-bold">${showName ? (res.full_name||'—') : mask(res.full_name)}</div>
+			<div class="fw-bold">${renderResidentLabel(res, link)}</div>
 			${res.phone ? `<div class="text-secondary small">Тел: ${showPhone ? res.phone : mask(res.phone)}</div>` : ''}
 			${res.email ? `<div class="text-secondary small">Email: ${showEmail ? res.email : mask(res.email)}</div>` : ''}
 			${res.telegram ? `<div class="text-secondary small">Telegram: ${showTelegram ? res.telegram : mask(res.telegram)}</div>` : ''}
@@ -739,3 +739,37 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     $('#chessboard').innerHTML = '<div class="p-3 text-danger">Ошибка загрузки данных</div>';
   }
 });
+
+/* ============================
+ * Хелпер отображения имени жильца со статусом арендатора
+ * ============================
+ * link: связь жильца с конкретной сущностью (квартира/паркинг/кладовая)
+ * ожидаем одно из:
+ *   - link.type === 'tenant' | 'owner'
+ *   - link.tenant === true/false
+ * Если данные приходят иначе — адаптируйте условие внутри.
+ */
+/**
+ * @param {{ full_name?: string, display_name?: string, privacy?: object }} res - объект жильца
+ * @param {{ type?: string, tenant?: boolean }} link - связь (апартамент/паркинг/кладовая)
+ * @returns {string} HTML с именем и, при необходимости, бейджем "Арендатор"
+ */
+function renderResidentLabel(res, link) {
+  // В админ-виде маски не применяем — имя всегда полное
+  const name = (res?.full_name || res?.display_name || '—').trim();
+
+  // Нормализуем признак "арендатор"
+  const isTenant = !!(
+    link &&
+    (link.type === 'tenant' || link.tenant === true || link.isTenant === true)
+  );
+
+  // Бейдж только для арендатора (минимум шума для собственника)
+  const badge = isTenant
+    ? `<span class="badge bg-yellow-lt text-yellow ms-2 align-middle" title="Арендатор">
+         <i class="ti ti-key me-1" aria-hidden="true"></i>Арендатор
+       </span>`
+    : '';
+
+  return `<span class="domus-resident-name">${name}</span>${badge}`;
+}
